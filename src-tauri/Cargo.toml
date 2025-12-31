@@ -1,0 +1,35 @@
+[package]
+name = "opnotes"
+version = "0.1.0"
+description = "A minimalist voice notes app"
+authors = ["opossum"]
+edition = "2021"
+
+[lib]
+name = "opnotes_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["full"] }
+dirs = "5"
+
+# Audio and transcription (Phase 3)
+# whisper-rs = "0.11"
+# cpal = "0.15"
+# hound = "3.5"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

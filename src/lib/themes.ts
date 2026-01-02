@@ -39,6 +39,38 @@ export interface Theme {
 
 export const themes: Theme[] = [
   {
+    id: 'covert',
+    name: 'Covert',
+    type: 'dark',
+    colors: {
+      surface0: '#0d0f14',
+      surface1: '#12151c',
+      surface2: '#181c25',
+      surface3: '#1e232e',
+      surface4: '#252b38',
+      textPrimary: '#8b95a8',
+      textSecondary: '#6b7585',
+      textDisabled: '#4d5565',
+      textGhost: '#353d4d',
+      accent: '#6b7fa8',
+      accentHover: '#8494b8',
+      accentMuted: '#4d5f85',
+      accentGlow: 'rgba(107, 127, 168, 0.4)',
+      accentDim: 'rgba(107, 127, 168, 0.15)',
+      recording: '#a85f5f',
+      recordingGlow: 'rgba(168, 95, 95, 0.4)',
+      recordingDim: 'rgba(168, 95, 95, 0.15)',
+      success: '#5f9a6b',
+      warning: '#a89a5f',
+      error: '#a85f5f',
+      errorDim: 'rgba(168, 95, 95, 0.15)',
+      borderSubtle: 'rgba(107, 127, 168, 0.08)',
+      borderDefault: 'rgba(107, 127, 168, 0.15)',
+      borderStrong: 'rgba(107, 127, 168, 0.25)',
+      divider: 'rgba(107, 127, 168, 0.1)',
+    },
+  },
+  {
     id: 'coral',
     name: 'Coral Terminal',
     type: 'dark',
@@ -232,7 +264,7 @@ export const themes: Theme[] = [
   },
 ];
 
-export const defaultTheme = 'coral';
+export const defaultTheme = 'covert';
 
 export function getTheme(id: string): Theme {
   return themes.find(t => t.id === id) || themes[0];

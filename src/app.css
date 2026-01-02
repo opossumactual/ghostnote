@@ -1,42 +1,49 @@
 :root {
-  /* Surfaces */
-  --surface-0: #0f0f0f;
-  --surface-1: #1a1a1a;
-  --surface-2: #242424;
-  --surface-3: #2a2a2a;
-  --surface-4: #333333;
+  /* Coral Terminal Theme */
+  /* Surfaces - deep dark with warm undertones */
+  --surface-0: #050404;
+  --surface-1: #0a0807;
+  --surface-2: #110e0c;
+  --surface-3: #1a1512;
+  --surface-4: #241d19;
 
-  /* Text */
-  --text-primary: #e0e0e0;
-  --text-secondary: #888888;
-  --text-disabled: #555555;
+  /* Text - warm coral tones */
+  --text-primary: #ff8652;
+  --text-secondary: #d4804a;
+  --text-disabled: #a06048;
+  --text-ghost: #6a4538;
 
-  /* Accent */
-  --accent: #5c7cfa;
-  --accent-hover: #748ffc;
-  --accent-muted: #364fc7;
+  /* Accent - coral orange */
+  --accent: #ff8652;
+  --accent-hover: #ffa070;
+  --accent-muted: #cc4f22;
+  --accent-glow: rgba(255, 134, 82, 0.5);
+  --accent-dim: rgba(255, 134, 82, 0.25);
 
-  /* Recording */
-  --recording: #ff6b6b;
-  --recording-glow: rgba(255, 107, 107, 0.4);
+  /* Recording - uses coral accent */
+  --recording: #ff7040;
+  --recording-glow: rgba(255, 112, 64, 0.5);
+  --recording-dim: rgba(255, 112, 64, 0.25);
 
   /* Semantic */
-  --success: #51cf66;
-  --warning: #fcc419;
-  --error: #ff6b6b;
+  --success: #4ade80;
+  --warning: #ffa070;
+  --error: #e55f30;
+  --error-dim: rgba(229, 95, 48, 0.25);
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.15);
-  --divider: rgba(255, 255, 255, 0.08);
+  /* Borders - warm tinted */
+  --border-subtle: rgba(255, 134, 82, 0.1);
+  --border-default: rgba(255, 134, 82, 0.18);
+  --border-strong: rgba(255, 134, 82, 0.28);
+  --divider: rgba(255, 134, 82, 0.12);
 
   /* Typography */
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
-  --font-size-base: 16px;
-  --font-size-sm: 14px;
-  --font-size-xs: 12px;
+  --font-ui: "IBM Plex Mono", "JetBrains Mono", "Fira Code", monospace;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", "Fira Code", monospace;
+  --font-display: "VT323", "IBM Plex Mono", monospace;
+  --font-size-base: 14px;
+  --font-size-sm: 13px;
+  --font-size-xs: 11px;
 
   /* Spacing */
   --space-xs: 4px;
@@ -51,9 +58,9 @@
   --transition-slow: 250ms ease;
 
   /* Layout */
-  --sidebar-width: 200px;
-  --notelist-width: 280px;
-  --toolbar-height: 48px;
+  --sidebar-width: 220px;
+  --notelist-width: 300px;
+  --toolbar-height: 52px;
   --statusbar-height: 28px;
 }
 
@@ -88,22 +95,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--surface-0);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: var(--text-ghost);
+  border: 2px solid var(--surface-0);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--text-disabled);
 }
 
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: var(--text-ghost) transparent;
 }
 
 /* Focus styles */

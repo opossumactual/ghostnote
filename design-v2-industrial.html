@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>opnotes - Industrial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange-50: #fff7ed;
+      --orange-100: #ffedd5;
+      --orange-200: #fed7aa;
+      --orange-300: #fdba74;
+      --orange-400: #fb923c;
+      --orange-500: #f97316;
+      --orange-600: #ea580c;
+      --orange-700: #c2410c;
+      --orange-800: #9a3412;
+
+      --concrete-100: #1e1e1e;
+      --concrete-200: #262626;
+      --concrete-300: #2d2d2d;
+      --concrete-400: #3a3a3a;
+      --concrete-500: #525252;
+
+      --text-white: #fafafa;
+      --text-gray: #a3a3a3;
+      --text-muted: #737373;
+      --text-dark: #525252;
+
+      --accent-glow: rgba(249, 115, 22, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--concrete-100);
+      color: var(--text-gray);
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      height: 64px;
+      background: var(--concrete-200);
+      border-bottom: 4px solid var(--orange-500);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    /* Diagonal stripe accent */
+    .toolbar::before {
+      content: '';
+      position: absolute;
+      right: 200px;
+      top: 0;
+      bottom: 0;
+      width: 100px;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        var(--orange-600) 8px,
+        var(--orange-600) 16px
+      );
+      opacity: 0.1;
+    }
+
+    .toolbar-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--concrete-300);
+      border: 2px solid transparent;
+      color: var(--text-gray);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .toolbar-btn::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--orange-500);
+      transform: scaleX(0);
+      transition: transform 0.2s;
+    }
+
+    .toolbar-btn:hover {
+      background: var(--concrete-400);
+      color: var(--text-white);
+      transform: translateY(-2px);
+    }
+
+    .toolbar-btn:hover::before {
+      transform: scaleX(1);
+    }
+
+    .toolbar-btn.active {
+      background: var(--orange-600);
+      color: var(--text-white);
+      border-color: var(--orange-400);
+      box-shadow:
+        0 4px 20px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .toolbar-btn svg {
+      transition: transform 0.2s;
+    }
+
+    .toolbar-btn:hover svg {
+      transform: scale(1.1);
+    }
+
+    .toolbar-divider {
+      width: 2px;
+      height: 32px;
+      background: var(--concrete-400);
+      margin: 0 8px;
+      transform: skewX(-15deg);
+    }
+
+    .app-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      color: var(--text-white);
+      letter-spacing: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-title span {
+      color: var(--orange-500);
+    }
+
+    /* Record button */
+    .record-btn.recording {
+      background: linear-gradient(135deg, var(--orange-600), var(--orange-700));
+      animation: industrial-pulse 0.8s ease-in-out infinite;
+    }
+
+    .record-btn.recording::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border: 2px solid var(--orange-400);
+      animation: expand-border 1s ease-out infinite;
+    }
+
+    @keyframes industrial-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+      50% { box-shadow: 0 0 30px 10px var(--accent-glow); }
+    }
+
+    @keyframes expand-border {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 240px;
+      background: var(--concrete-200);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Geometric accent */
+    .sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--orange-500), var(--orange-700), transparent);
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 2px solid var(--concrete-400);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--concrete-100);
+      border: 2px solid var(--concrete-400);
+      position: relative;
+    }
+
+    /* Corner accent */
+    .search-box::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 12px;
+      height: 12px;
+      border-top: 2px solid var(--orange-500);
+      border-left: 2px solid var(--orange-500);
+    }
+
+    .search-box::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-bottom: 2px solid var(--orange-500);
+      border-right: 2px solid var(--orange-500);
+    }
+
+    .search-box svg {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-white);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 12px;
+    }
+
+    .search-box input:focus {
+      outline: none;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--orange-500);
+    }
+
+    .folder-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .section-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--orange-500);
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 16px;
+      height: 3px;
+      background: var(--orange-500);
+    }
+
+    .folder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      border-left: 3px solid transparent;
+      color: var(--text-gray);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      position: relative;
+    }
+
+    .folder-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      background: var(--concrete-300);
+      transition: width 0.2s;
+      z-index: -1;
+    }
+
+    .folder-item:hover::before {
+      width: 100%;
+    }
+
+    .folder-item:hover {
+      color: var(--text-white);
+      border-left-color: var(--orange-500);
+    }
+
+    .folder-item.selected {
+      color: var(--orange-400);
+      border-left-color: var(--orange-500);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .folder-count {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--concrete-400);
+      padding: 2px 8px;
+      font-weight: 600;
+    }
+
+    /* ===== NOTE LIST ===== */
+    .note-list {
+      width: 320px;
+      background: var(--concrete-300);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-left: 1px solid var(--concrete-400);
+      border-right: 1px solid var(--concrete-400);
+    }
+
+    .note-list-header {
+      padding: 20px;
+      border-bottom: 2px solid var(--concrete-400);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .note-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .notes-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .note-item {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--concrete-200);
+      border: none;
+      border-left: 4px solid transparent;
+      color: var(--text-gray);
+      font-family: 'Space Grotesk', sans-serif;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .note-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 20px 20px 0;
+      border-color: transparent var(--concrete-300) transparent transparent;
+    }
+
+    .note-item:hover {
+      background: var(--concrete-400);
+      border-left-color: var(--orange-500);
+      transform: translateX(4px);
+    }
+
+    .note-item.selected {
+      background: linear-gradient(90deg, rgba(249, 115, 22, 0.15), transparent);
+      border-left-color: var(--orange-500);
+    }
+
+    .note-item.selected::before {
+      border-color: transparent var(--orange-600) transparent transparent;
+    }
+
+    .note-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .note-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    .note-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .note-preview {
+      font-size: 13px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .note-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .note-tag {
+      font-size: 10px;
+      padding: 3px 8px;
+      background: var(--concrete-400);
+      color: var(--orange-400);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== EDITOR ===== */
+    .editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--concrete-100);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Large geometric decoration */
+    .editor::before {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      border: 40px solid var(--concrete-200);
+      transform: rotate(45deg);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .editor-header {
+      padding: 20px 32px;
+      border-bottom: 2px solid var(--concrete-300);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--concrete-200);
+    }
+
+    .editor-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--text-white);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .editor-title::before {
+      content: '';
+      width: 8px;
+      height: 32px;
+      background: var(--orange-500);
+    }
+
+    .editor-meta {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meta-item svg {
+      color: var(--orange-500);
+    }
+
+    .editor-content {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      line-height: 1.9;
+      resize: none;
+    }
+
+    .editor-textarea:focus {
+      outline: none;
+    }
+
+    .editor-textarea::placeholder {
+      color: var(--text-dark);
+    }
+
+    .editor-textarea::selection {
+      background: var(--orange-600);
+      color: var(--text-white);
+    }
+
+    /* ===== STATUS BAR ===== */
+    .statusbar {
+      height: 36px;
+      background: var(--concrete-300);
+      border-top: 2px solid var(--orange-600);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-section {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      background: var(--orange-500);
+      animation: status-blink 2s ease-in-out infinite;
+    }
+
+    .status-indicator.saved {
+      background: #22c55e;
+      animation: none;
+    }
+
+    @keyframes status-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      background: var(--orange-600);
+      color: var(--text-white);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--concrete-200);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--concrete-500);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--orange-600);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Toolbar -->
+    <header class="toolbar">
+      <div class="toolbar-section">
+        <button class="toolbar-btn active" title="Toggle sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
+        </button>
+        <button class="toolbar-btn active" title="Toggle note list">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          NEW
+        </button>
+        <button class="toolbar-btn record-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="6" />
+          </svg>
+          REC
+        </button>
+      </div>
+
+      <div class="app-title">OP<span>NOTES</span></div>
+
+      <div class="toolbar-section">
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+          </svg>
+        </button>
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input type="text" placeholder="Search notes" />
+          </div>
+        </div>
+
+        <div class="folder-section">
+          <div class="section-label">Folders</div>
+          <div class="folder-list">
+            <button class="folder-item selected">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              All Notes
+              <span class="folder-count">24</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Work
+              <span class="folder-count">12</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Personal
+              <span class="folder-count">8</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Voice Memos
+              <span class="folder-count">4</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Note List -->
+      <section class="note-list">
+        <div class="note-list-header">
+          <div class="section-label">Notes</div>
+          <span class="note-count">24 ITEMS</span>
+        </div>
+        <div class="notes-container">
+          <button class="note-item selected">
+            <div class="note-header">
+              <div class="note-title">Project Roadmap Q1</div>
+              <div class="note-date">01.02.26</div>
+            </div>
+            <div class="note-preview">Planning the Q1 objectives and key results for the team...</div>
+            <div class="note-tags">
+              <span class="note-tag">PLANNING</span>
+              <span class="note-tag">Q1</span>
+            </div>
+          </button>
+          <button class="note-item">
+            <div class="note-header">
+              <div class="note-title">Meeting Notes</div>
+              <div class="note-date">01.02.26</div>
+            </div>
+            <div class="note-preview">Discussed the new feature implementation timeline...</div>
+            <div class="note-tags">
+              <span class="note-tag">MEETING</span>
+            </div>
+          </button>
+          <button class="note-item">
+            <div class="note-header">
+              <div class="note-title">Voice Memo #12</div>
+              <div class="note-date">01.01.26</div>
+            </div>
+            <div class="note-preview">Quick thoughts about the architecture decisions...</div>
+            <div class="note-tags">
+              <span class="note-tag">VOICE</span>
+            </div>
+          </button>
+          <button class="note-item">
+            <div class="note-header">
+              <div class="note-title">Feature Ideas</div>
+              <div class="note-date">12.30.25</div>
+            </div>
+            <div class="note-preview">Brainstorming session results and next steps...</div>
+            <div class="note-tags">
+              <span class="note-tag">IDEAS</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Editor -->
+      <main class="editor">
+        <div class="editor-header">
+          <div class="editor-title">PROJECT ROADMAP Q1</div>
+          <div class="editor-meta">
+            <div class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12,6 12,12 16,14" />
+              </svg>
+              Last edited 2h ago
+            </div>
+            <div class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14,2 14,8 20,8" />
+              </svg>
+              127 words
+            </div>
+          </div>
+        </div>
+        <div class="editor-content">
+          <textarea class="editor-textarea" placeholder="Start typing or record a voice memo...">## Q1 2026 Roadmap
+
+### Objectives
+
+1. **Launch voice transcription feature**
+   - Integrate Whisper for local processing
+   - Add real-time transcription mode
+   - Support multiple audio input devices
+
+2. **Improve note organization**
+   - Implement tagging system
+   - Add smart search with filters
+   - Create note linking/backlinking
+
+3. **Performance optimizations**
+   - Reduce startup time to under 500ms
+   - Optimize memory usage for large collections
+
+### Timeline
+
+- Week 1-2: Voice transcription core
+- Week 3-4: UI polish and testing
+- Week 5-6: Organization features
+- Week 7-8: Performance and launch prep</textarea>
+        </div>
+      </main>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="statusbar">
+      <div class="status-section">
+        <div class="status-item">
+          <span class="status-indicator saved"></span>
+          SAVED
+        </div>
+        <div class="status-item">UTF-8</div>
+        <div class="status-item">MARKDOWN</div>
+      </div>
+      <div class="status-section">
+        <div class="status-item">Ln 24, Col 1</div>
+        <span class="status-badge">WHISPER READY</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

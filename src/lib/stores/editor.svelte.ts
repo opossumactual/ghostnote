@@ -31,11 +31,11 @@ function updateContent(newContent: string) {
   wordCount = newContent.split(/\s+/).filter(Boolean).length;
   isDirty = true;
 
-  // Debounced save
+  // Debounced auto-save (3 seconds after typing stops)
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     save();
-  }, 1000);
+  }, 3000);
 }
 
 async function save() {
@@ -63,11 +63,11 @@ function insertAtCursor(text: string) {
   cursorPosition += text.length;
   isDirty = true;
 
-  // Trigger save
+  // Debounced auto-save (3 seconds after content change)
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     save();
-  }, 1000);
+  }, 3000);
 }
 
 function clear() {

@@ -154,9 +154,15 @@
     gap: var(--space-sm);
     padding: var(--space-sm);
     background: var(--surface-0);
-    border-radius: 6px;
+    border: 1px solid var(--text-ghost);
     margin-bottom: var(--space-md);
     color: var(--text-disabled);
+    transition: all var(--transition-fast);
+  }
+
+  .search-wrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
   }
 
   .search-input {
@@ -220,9 +226,19 @@
 
   .folder-label {
     font-size: var(--font-size-xs);
-    color: var(--text-disabled);
+    color: var(--text-ghost);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .folder-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--text-ghost), transparent);
   }
 
   .add-folder-btn {
@@ -283,21 +299,24 @@
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-sm);
-    border-radius: 6px;
-    color: var(--text-secondary);
+    border-left: 2px solid transparent;
+    color: var(--text-disabled);
     text-align: left;
     width: 100%;
     transition: all var(--transition-fast);
   }
 
   .folder-item:hover {
-    background: var(--surface-2);
+    background: var(--accent-dim);
     color: var(--text-primary);
+    border-left-color: var(--accent);
   }
 
   .folder-item.selected {
-    background: var(--surface-3);
-    color: var(--text-primary);
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    text-shadow: 0 0 8px var(--accent-glow);
   }
 
   .folder-item.nested {
@@ -306,5 +325,13 @@
 
   .folder-item span {
     font-size: var(--font-size-sm);
+  }
+
+  .folder-item svg {
+    opacity: 0.7;
+  }
+
+  .folder-item.selected svg {
+    opacity: 1;
   }
 </style>

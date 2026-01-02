@@ -48,14 +48,22 @@
     align-items: center;
     gap: var(--space-xs);
     padding: var(--space-xs) var(--space-sm);
-    border-radius: 6px;
-    color: var(--text-secondary);
+    border: 1px solid transparent;
+    color: var(--text-disabled);
     transition: all var(--transition-fast);
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.5px;
+    position: relative;
+    min-width: 90px;
+    flex-shrink: 0;
   }
 
   .record-btn:hover:not(:disabled) {
     background: var(--surface-2);
     color: var(--text-primary);
+    border-color: var(--text-ghost);
+    text-shadow: 0 0 10px var(--accent-glow);
   }
 
   .record-btn:disabled {
@@ -64,14 +72,27 @@
   }
 
   .record-btn span {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
   }
 
   .record-btn.recording {
     color: var(--recording);
-    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--recording);
+    background: var(--recording-dim);
     box-shadow: 0 0 20px var(--recording-glow);
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  .record-btn.recording::before {
+    content: 'REC';
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 8px;
+    padding: 1px 4px;
+    background: var(--recording);
+    color: var(--surface-0);
+    animation: blink 0.5s step-end infinite;
   }
 
   .record-btn.processing {
@@ -90,6 +111,10 @@
     50% {
       box-shadow: 0 0 25px var(--recording-glow);
     }
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
   }
 
   @keyframes spin {

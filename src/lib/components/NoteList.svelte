@@ -82,14 +82,17 @@
 
   .list-header {
     padding: var(--space-sm) var(--space-md);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px dashed var(--text-ghost);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .note-count {
-    font-size: var(--font-size-xs);
-    color: var(--text-disabled);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-display), monospace;
+    font-size: 14px;
+    color: var(--text-ghost);
+    letter-spacing: 1px;
   }
 
   .notes {
@@ -172,19 +175,23 @@
     width: 100%;
     padding: var(--space-md);
     text-align: left;
-    border-bottom: 1px solid var(--border-subtle);
-    transition: background var(--transition-fast);
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    transition: all var(--transition-fast);
     cursor: pointer;
+    margin-bottom: 4px;
   }
 
   .note-item:hover {
-    background: var(--surface-2);
+    background: var(--surface-3);
+    border-color: var(--text-ghost);
+    border-left-color: var(--accent);
   }
 
   .note-item.selected {
-    background: var(--surface-2);
-    border-left: 3px solid var(--accent);
-    padding-left: calc(var(--space-md) - 3px);
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    border-left-color: var(--accent);
   }
 
   .note-content {
@@ -206,7 +213,7 @@
   }
 
   .delete-btn:hover {
-    background: rgba(255, 107, 107, 0.1);
+    background: var(--error-dim);
     color: var(--error);
   }
 
@@ -215,21 +222,33 @@
     font-weight: 500;
     color: var(--text-primary);
     margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .note-title::before {
+    content: '>';
+    color: var(--accent);
   }
 
   .note-meta {
     display: flex;
     gap: var(--space-sm);
-    font-size: var(--font-size-xs);
-    color: var(--text-disabled);
+    color: var(--text-ghost);
     margin-bottom: var(--space-xs);
+    padding-left: var(--space-md);
+    font-family: var(--font-display), monospace;
+    font-size: 12px;
   }
 
   .note-preview {
-    font-size: var(--font-size-xs);
-    color: var(--text-secondary);
+    font-size: 12px;
+    color: var(--text-disabled);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding-left: var(--space-md);
+    opacity: 0.85;
   }
 </style>

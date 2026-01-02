@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>opnotes - Editorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sunset-gold: #d4a574;
+      --sunset-amber: #c4956a;
+      --sunset-copper: #b8865c;
+      --sunset-rust: #a67550;
+      --sunset-bronze: #8b6245;
+      --sunset-glow: rgba(212, 165, 116, 0.2);
+      --sunset-soft: rgba(212, 165, 116, 0.08);
+
+      --ink-deep: #0c0b0a;
+      --ink-dark: #141311;
+      --ink-medium: #1c1a17;
+      --ink-light: #252320;
+      --ink-muted: #3a3733;
+
+      --paper-white: #f5f2ed;
+      --paper-cream: #e8e4dc;
+      --paper-warm: #d4cfc5;
+      --paper-tan: #a69d8f;
+      --paper-dim: #7a7267;
+
+      --gradient-sunset: linear-gradient(135deg, #d4a574, #c4956a, #a67550);
+      --gradient-warm: linear-gradient(180deg, rgba(212, 165, 116, 0.15), transparent);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--ink-deep);
+      color: var(--paper-warm);
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Subtle gradient overlay */
+    .app::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 300px;
+      background: radial-gradient(ellipse at top left, rgba(212, 165, 116, 0.08), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      height: 56px;
+      background: var(--ink-dark);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    .toolbar-section {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--paper-tan);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toolbar-btn:hover {
+      background: var(--sunset-soft);
+      color: var(--sunset-gold);
+    }
+
+    .toolbar-btn.active {
+      background: var(--sunset-soft);
+      color: var(--sunset-gold);
+    }
+
+    .toolbar-btn svg {
+      transition: transform 0.25s;
+    }
+
+    .toolbar-btn:hover svg {
+      transform: translateY(-1px);
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--ink-muted);
+      margin: 0 8px;
+    }
+
+    .app-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--sunset-gold);
+      letter-spacing: 2px;
+    }
+
+    /* Record button with elegant animation */
+    .record-btn.recording {
+      background: var(--gradient-sunset);
+      color: var(--ink-deep);
+    }
+
+    .record-btn.recording svg {
+      animation: gentle-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes gentle-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 260px;
+      background: var(--ink-dark);
+      border-right: 1px solid rgba(212, 165, 116, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--ink-medium);
+      border: 1px solid var(--ink-muted);
+      border-radius: 12px;
+      transition: all 0.25s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--sunset-amber);
+      box-shadow: 0 0 0 3px var(--sunset-soft);
+    }
+
+    .search-box svg {
+      color: var(--paper-dim);
+      flex-shrink: 0;
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--paper-cream);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+    }
+
+    .search-box input::placeholder {
+      color: var(--paper-dim);
+      font-style: italic;
+    }
+
+    .search-box input:focus {
+      outline: none;
+    }
+
+    .folder-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px 20px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 8px;
+      margin-bottom: 8px;
+    }
+
+    .section-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--paper-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .add-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--ink-muted);
+      border-radius: 6px;
+      color: var(--paper-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .add-btn:hover {
+      border-color: var(--sunset-amber);
+      color: var(--sunset-gold);
+      background: var(--sunset-soft);
+    }
+
+    .folder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: var(--paper-tan);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      width: 100%;
+    }
+
+    .folder-item:hover {
+      background: var(--sunset-soft);
+      color: var(--sunset-gold);
+    }
+
+    .folder-item.selected {
+      background: var(--sunset-soft);
+      color: var(--sunset-gold);
+    }
+
+    .folder-item svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .folder-item.selected svg {
+      opacity: 1;
+    }
+
+    .folder-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--paper-dim);
+    }
+
+    /* ===== NOTE LIST ===== */
+    .note-list {
+      width: 340px;
+      background: var(--ink-medium);
+      border-right: 1px solid rgba(212, 165, 116, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .note-list-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--ink-muted);
+    }
+
+    .list-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--paper-cream);
+      margin-bottom: 4px;
+    }
+
+    .note-count {
+      font-size: 12px;
+      color: var(--paper-dim);
+    }
+
+    .notes-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .note-item {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      border: none;
+      border-radius: 12px;
+      color: var(--paper-tan);
+      font-family: 'DM Sans', sans-serif;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.25s;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .note-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      background: var(--gradient-sunset);
+      border-radius: 2px;
+      transition: height 0.25s;
+    }
+
+    .note-item:hover {
+      background: var(--ink-light);
+    }
+
+    .note-item:hover::before {
+      height: 50%;
+    }
+
+    .note-item.selected {
+      background: var(--ink-light);
+    }
+
+    .note-item.selected::before {
+      height: 70%;
+    }
+
+    .note-date {
+      font-size: 11px;
+      color: var(--paper-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .note-date .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--sunset-amber);
+    }
+
+    .note-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--paper-cream);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .note-preview {
+      font-size: 13px;
+      color: var(--paper-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.5;
+    }
+
+    /* ===== EDITOR ===== */
+    .editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--ink-deep);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Subtle radial accent */
+    .editor::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(212, 165, 116, 0.05), transparent 60%);
+      pointer-events: none;
+    }
+
+    .editor-header {
+      padding: 24px 40px 20px;
+      border-bottom: 1px solid var(--ink-muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    .editor-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--paper-dim);
+      margin-bottom: 12px;
+    }
+
+    .meta-divider {
+      width: 1px;
+      height: 12px;
+      background: var(--ink-muted);
+    }
+
+    .editor-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--paper-white);
+      line-height: 1.2;
+    }
+
+    .editor-subtitle {
+      font-size: 14px;
+      color: var(--paper-dim);
+      font-style: italic;
+      margin-top: 8px;
+    }
+
+    .editor-actions {
+      position: absolute;
+      top: 24px;
+      right: 40px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .editor-content {
+      flex: 1;
+      padding: 32px 40px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: 100%;
+      max-width: 720px;
+      background: transparent;
+      border: none;
+      color: var(--paper-cream);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.9;
+      resize: none;
+    }
+
+    .editor-textarea:focus {
+      outline: none;
+    }
+
+    .editor-textarea::placeholder {
+      color: var(--paper-dim);
+      font-style: italic;
+    }
+
+    .editor-textarea::selection {
+      background: var(--sunset-soft);
+    }
+
+    /* Markdown heading styling simulation */
+    .prose {
+      max-width: 720px;
+      color: var(--paper-cream);
+      line-height: 1.9;
+    }
+
+    .prose h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--sunset-gold);
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--ink-muted);
+    }
+
+    .prose h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--paper-white);
+      margin: 24px 0 12px;
+    }
+
+    .prose p {
+      margin-bottom: 16px;
+    }
+
+    .prose strong {
+      color: var(--sunset-gold);
+      font-weight: 600;
+    }
+
+    .prose ul, .prose ol {
+      margin-left: 24px;
+      margin-bottom: 16px;
+    }
+
+    .prose li {
+      margin-bottom: 8px;
+    }
+
+    .prose li::marker {
+      color: var(--sunset-amber);
+    }
+
+    /* ===== STATUS BAR ===== */
+    .statusbar {
+      height: 32px;
+      background: var(--ink-dark);
+      border-top: 1px solid rgba(212, 165, 116, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-size: 11px;
+      color: var(--paper-dim);
+      position: relative;
+      z-index: 10;
+    }
+
+    .status-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sunset-amber);
+    }
+
+    .status-indicator.saved {
+      background: #6ee7b7;
+    }
+
+    .status-accent {
+      color: var(--sunset-gold);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--ink-muted);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--sunset-bronze);
+    }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+      color: var(--ink-muted);
+    }
+
+    .empty-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      color: var(--paper-cream);
+      margin-bottom: 8px;
+    }
+
+    .empty-subtitle {
+      font-size: 14px;
+      color: var(--paper-dim);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Toolbar -->
+    <header class="toolbar">
+      <div class="toolbar-section">
+        <button class="toolbar-btn active" title="Toggle sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
+        </button>
+        <button class="toolbar-btn active" title="Toggle note list">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          New
+        </button>
+        <button class="toolbar-btn record-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="6" />
+          </svg>
+          Record
+        </button>
+      </div>
+
+      <div class="app-title">opnotes</div>
+
+      <div class="toolbar-section">
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+          </svg>
+        </button>
+        <button class="toolbar-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input type="text" placeholder="Search your notes..." />
+          </div>
+        </div>
+
+        <div class="folder-section">
+          <div class="section-header">
+            <span class="section-label">Collections</span>
+            <button class="add-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
+          <div class="folder-list">
+            <button class="folder-item selected">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              All Notes
+              <span class="folder-count">24</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Journal
+              <span class="folder-count">12</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Ideas
+              <span class="folder-count">8</span>
+            </button>
+            <button class="folder-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+              </svg>
+              Voice Memos
+              <span class="folder-count">4</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Note List -->
+      <section class="note-list">
+        <div class="note-list-header">
+          <div class="list-title">All Notes</div>
+          <span class="note-count">24 notes</span>
+        </div>
+        <div class="notes-container">
+          <button class="note-item selected">
+            <div class="note-date">
+              <span class="dot"></span>
+              January 2, 2026
+            </div>
+            <div class="note-title">Project Roadmap for Q1</div>
+            <div class="note-preview">Planning the quarterly objectives and key results for the team, focusing on voice transcription features and performance...</div>
+          </button>
+          <button class="note-item">
+            <div class="note-date">
+              <span class="dot"></span>
+              January 2, 2026
+            </div>
+            <div class="note-title">Morning Reflections</div>
+            <div class="note-preview">Thoughts from the morning walk, considering the architecture decisions for the new feature implementation...</div>
+          </button>
+          <button class="note-item">
+            <div class="note-date">
+              <span class="dot"></span>
+              January 1, 2026
+            </div>
+            <div class="note-title">Voice Memo: Late Night Ideas</div>
+            <div class="note-preview">Transcribed thoughts about improving the workflow and adding new organizational features...</div>
+          </button>
+          <button class="note-item">
+            <div class="note-date">
+              <span class="dot"></span>
+              December 30, 2025
+            </div>
+            <div class="note-title">Year-End Review</div>
+            <div class="note-preview">Looking back at the accomplishments of 2025 and setting intentions for the new year ahead...</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Editor -->
+      <main class="editor">
+        <div class="editor-header">
+          <div class="editor-meta">
+            <span>January 2, 2026</span>
+            <span class="meta-divider"></span>
+            <span>127 words</span>
+            <span class="meta-divider"></span>
+            <span>Last edited 2 hours ago</span>
+          </div>
+          <h1 class="editor-title">Project Roadmap for Q1</h1>
+          <p class="editor-subtitle">Planning and objectives for the first quarter</p>
+          <div class="editor-actions">
+            <button class="toolbar-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                <polyline points="17,21 17,13 7,13 7,21" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="editor-content">
+          <textarea class="editor-textarea" placeholder="Begin writing your thoughts...">## Objectives
+
+1. **Launch voice transcription feature**
+   - Integrate Whisper for local processing
+   - Add real-time transcription mode
+   - Support multiple audio input devices
+
+2. **Improve note organization**
+   - Implement tagging system
+   - Add smart search with filters
+   - Create note linking and backlinking
+
+3. **Performance optimizations**
+   - Reduce startup time to under 500ms
+   - Optimize memory usage for large note collections
+
+## Timeline
+
+- Week 1-2: Voice transcription core functionality
+- Week 3-4: UI polish and comprehensive testing
+- Week 5-6: Organization features rollout
+- Week 7-8: Performance tuning and launch preparation
+
+## Notes
+
+The voice transcription feature should feel magical. Users should be able to capture their thoughts effortlessly, with the app handling all the complexity of audio processing behind the scenes.
+
+Focus on reliability over features. A simple, reliable experience is better than a complex, buggy one.</textarea>
+        </div>
+      </main>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="statusbar">
+      <div class="status-section">
+        <div class="status-item">
+          <span class="status-indicator saved"></span>
+          Saved
+        </div>
+        <div class="status-item">Markdown</div>
+      </div>
+      <div class="status-section">
+        <div class="status-item">Line 24, Column 1</div>
+        <div class="status-item status-accent">Whisper Ready</div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

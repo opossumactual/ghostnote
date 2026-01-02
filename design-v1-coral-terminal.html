@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>opnotes - Coral Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --coral-100: #ffe8dc;
+      --coral-200: #ffd4c0;
+      --coral-300: #ffbc9a;
+      --coral-400: #ffa070;
+      --coral-500: #ff8652;
+      --coral-600: #ff7040;
+      --coral-700: #e55f30;
+      --coral-800: #cc4f22;
+      --coral-glow: rgba(255, 134, 82, 0.4);
+      --coral-dim: rgba(255, 134, 82, 0.15);
+
+      --bg-deep: #050404;
+      --bg-dark: #0a0807;
+      --bg-medium: #110e0c;
+      --bg-light: #1a1512;
+
+      --text-bright: #ff8652;
+      --text-normal: #cc7045;
+      --text-dim: #8a5038;
+      --text-ghost: #4a2e24;
+
+      --scanline-opacity: 0.03;
+      --crt-curvature: 3px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'IBM Plex Mono', monospace;
+      background: var(--bg-deep);
+      color: var(--text-normal);
+    }
+
+    /* CRT Screen Effect Container */
+    .crt-container {
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Scanlines overlay */
+    .crt-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, var(--scanline-opacity)) 2px,
+        rgba(0, 0, 0, var(--scanline-opacity)) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* Screen glow effect */
+    .crt-container::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      box-shadow:
+        inset 0 0 120px rgba(255, 134, 82, 0.05),
+        inset 0 0 60px rgba(255, 112, 64, 0.03);
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      height: 52px;
+      background: var(--bg-dark);
+      border-bottom: 1px solid var(--text-ghost);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    .toolbar-section {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 0;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar-btn:hover {
+      color: var(--text-bright);
+      border-color: var(--text-ghost);
+      text-shadow: 0 0 10px var(--coral-glow);
+    }
+
+    .toolbar-btn.active {
+      color: var(--coral-500);
+      border-color: var(--coral-600);
+      background: var(--coral-dim);
+      box-shadow:
+        0 0 10px var(--coral-glow),
+        inset 0 0 10px rgba(255, 134, 82, 0.05);
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--text-ghost);
+      margin: 0 8px;
+    }
+
+    .app-title {
+      font-family: 'VT323', monospace;
+      font-size: 28px;
+      color: var(--coral-500);
+      text-shadow:
+        0 0 10px var(--coral-glow),
+        0 0 20px rgba(255, 134, 82, 0.2);
+      letter-spacing: 4px;
+      animation: flicker 4s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      92% { opacity: 1; }
+      93% { opacity: 0.8; }
+      94% { opacity: 1; }
+      95% { opacity: 0.9; }
+      96% { opacity: 1; }
+    }
+
+    /* Record button special styling */
+    .record-btn {
+      position: relative;
+    }
+
+    .record-btn.recording {
+      color: var(--coral-700) !important;
+      border-color: var(--coral-700) !important;
+      animation: recording-pulse 1s ease-in-out infinite;
+    }
+
+    .record-btn.recording::before {
+      content: 'REC';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      font-size: 8px;
+      padding: 2px 4px;
+      background: var(--coral-700);
+      color: var(--bg-deep);
+      animation: blink 0.5s step-end infinite;
+    }
+
+    @keyframes recording-pulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(229, 95, 48, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(229, 95, 48, 0.6); }
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-dark);
+      border-right: 1px solid var(--text-ghost);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 1px dashed var(--text-ghost);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--text-ghost);
+    }
+
+    .search-box svg {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-normal);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-ghost);
+    }
+
+    .search-box input:focus {
+      outline: none;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--coral-600);
+      box-shadow: 0 0 10px var(--coral-glow);
+    }
+
+    .folder-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      color: var(--text-ghost);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--text-ghost), transparent);
+    }
+
+    .folder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      border-left: 2px solid transparent;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+
+    .folder-item:hover {
+      color: var(--text-bright);
+      background: var(--coral-dim);
+      border-left-color: var(--coral-600);
+    }
+
+    .folder-item.selected {
+      color: var(--coral-500);
+      background: var(--coral-dim);
+      border-left-color: var(--coral-500);
+      text-shadow: 0 0 8px var(--coral-glow);
+    }
+
+    .folder-item svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* ===== NOTE LIST ===== */
+    .note-list {
+      width: 300px;
+      background: var(--bg-medium);
+      border-right: 1px solid var(--text-ghost);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .note-list-header {
+      padding: 12px 16px;
+      border-bottom: 1px dashed var(--text-ghost);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .note-count {
+      font-size: 11px;
+      color: var(--text-ghost);
+      font-family: 'VT323', monospace;
+      font-size: 16px;
+    }
+
+    .notes-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .note-item {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-left: 3px solid transparent;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .note-item:hover {
+      background: var(--bg-light);
+      border-color: var(--text-ghost);
+      border-left-color: var(--coral-600);
+    }
+
+    .note-item.selected {
+      background: var(--coral-dim);
+      border-color: var(--coral-600);
+      border-left-color: var(--coral-500);
+      color: var(--text-bright);
+    }
+
+    .note-title {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .note-title::before {
+      content: '>';
+      color: var(--coral-600);
+    }
+
+    .note-preview {
+      font-size: 12px;
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-left: 16px;
+      opacity: 0.85;
+    }
+
+    .note-date {
+      font-size: 10px;
+      color: var(--text-ghost);
+      margin-top: 6px;
+      padding-left: 16px;
+      font-family: 'VT323', monospace;
+      font-size: 14px;
+    }
+
+    /* ===== EDITOR ===== */
+    .editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-deep);
+      overflow: hidden;
+    }
+
+    .editor-header {
+      padding: 12px 24px;
+      border-bottom: 1px dashed var(--text-ghost);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .editor-title {
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      color: var(--coral-500);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .editor-title::before {
+      content: '$';
+      color: var(--text-dim);
+    }
+
+    .editor-title::after {
+      content: '_';
+      animation: cursor-blink 1s step-end infinite;
+    }
+
+    @keyframes cursor-blink {
+      50% { opacity: 0; }
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .editor-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* Line numbers gutter effect */
+    .editor-content::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 48px;
+      background: linear-gradient(90deg, var(--bg-dark), transparent);
+      pointer-events: none;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-normal);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      resize: none;
+      padding-left: 56px;
+    }
+
+    .editor-textarea:focus {
+      outline: none;
+    }
+
+    .editor-textarea::placeholder {
+      color: var(--text-ghost);
+    }
+
+    /* Selection styling */
+    .editor-textarea::selection {
+      background: var(--coral-dim);
+      color: var(--coral-300);
+    }
+
+    /* ===== STATUS BAR ===== */
+    .statusbar {
+      height: 28px;
+      background: var(--bg-dark);
+      border-top: 1px solid var(--text-ghost);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-ghost);
+    }
+
+    .status-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--coral-600);
+      box-shadow: 0 0 6px var(--coral-glow);
+    }
+
+    .status-indicator.saved {
+      background: #4ade80;
+      box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--text-ghost);
+      border: 2px solid var(--bg-deep);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
+
+    /* Terminal prompt styling for empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+    }
+
+    .terminal-prompt {
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      color: var(--coral-500);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .terminal-prompt span {
+      animation: typing 2s steps(20) forwards;
+      overflow: hidden;
+      white-space: nowrap;
+      display: inline-block;
+    }
+
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    .command-hints {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+    }
+
+    .command-hint {
+      color: var(--text-dim);
+    }
+
+    .command-hint kbd {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--bg-medium);
+      border: 1px solid var(--text-ghost);
+      color: var(--coral-500);
+      margin-right: 8px;
+      font-family: 'VT323', monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-container">
+    <div class="app">
+      <!-- Toolbar -->
+      <header class="toolbar">
+        <div class="toolbar-section">
+          <button class="toolbar-btn active" title="Toggle sidebar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 3v18" />
+            </svg>
+          </button>
+          <button class="toolbar-btn active" title="Toggle note list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+          </button>
+          <div class="toolbar-divider"></div>
+          <button class="toolbar-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            NEW
+          </button>
+          <button class="toolbar-btn record-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="6" />
+            </svg>
+            REC
+          </button>
+        </div>
+
+        <div class="app-title">OPNOTES</div>
+
+        <div class="toolbar-section">
+          <button class="toolbar-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+            </svg>
+          </button>
+          <button class="toolbar-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <div class="main">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input type="text" placeholder="grep notes..." />
+            </div>
+          </div>
+
+          <div class="folder-section">
+            <div class="section-label">Directories</div>
+            <div class="folder-list">
+              <button class="folder-item selected">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                </svg>
+                /notes
+              </button>
+              <button class="folder-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                </svg>
+                /meetings
+              </button>
+              <button class="folder-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                </svg>
+                /ideas
+              </button>
+              <button class="folder-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                </svg>
+                /archive
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Note List -->
+        <section class="note-list">
+          <div class="note-list-header">
+            <div class="section-label">Files</div>
+            <span class="note-count">12 entries</span>
+          </div>
+          <div class="notes-container">
+            <button class="note-item selected">
+              <div class="note-title">project-roadmap.md</div>
+              <div class="note-preview">Planning the Q1 objectives and key results...</div>
+              <div class="note-date">2026-01-02 14:32</div>
+            </button>
+            <button class="note-item">
+              <div class="note-title">meeting-standup.md</div>
+              <div class="note-preview">Daily standup notes from the morning...</div>
+              <div class="note-date">2026-01-02 09:15</div>
+            </button>
+            <button class="note-item">
+              <div class="note-title">voice-memo-001.md</div>
+              <div class="note-preview">Transcribed thoughts about the new feature...</div>
+              <div class="note-date">2026-01-01 22:48</div>
+            </button>
+            <button class="note-item">
+              <div class="note-title">ideas-brainstorm.md</div>
+              <div class="note-preview">Random ideas for improving the workflow...</div>
+              <div class="note-date">2025-12-30 16:20</div>
+            </button>
+          </div>
+        </section>
+
+        <!-- Editor -->
+        <main class="editor">
+          <div class="editor-header">
+            <div class="editor-title">project-roadmap.md</div>
+            <div class="editor-actions">
+              <button class="toolbar-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                  <polyline points="17,21 17,13 7,13 7,21" />
+                  <polyline points="7,3 7,8 15,8" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="editor-content">
+            <textarea class="editor-textarea" placeholder="Begin typing or start voice recording...">## Q1 2026 Roadmap
+
+### Objectives
+
+1. **Launch voice transcription feature**
+   - Integrate Whisper for local processing
+   - Add real-time transcription mode
+   - Support multiple audio input devices
+
+2. **Improve note organization**
+   - Implement tagging system
+   - Add smart search with filters
+   - Create note linking/backlinking
+
+3. **Performance optimizations**
+   - Reduce startup time to under 500ms
+   - Optimize memory usage for large note collections
+
+### Timeline
+
+- Week 1-2: Voice transcription core
+- Week 3-4: UI polish and testing
+- Week 5-6: Organization features
+- Week 7-8: Performance and launch prep</textarea>
+          </div>
+        </main>
+      </div>
+
+      <!-- Status Bar -->
+      <footer class="statusbar">
+        <div class="status-section">
+          <div class="status-item">
+            <span class="status-indicator saved"></span>
+            SAVED
+          </div>
+          <div class="status-item">UTF-8</div>
+          <div class="status-item">LF</div>
+        </div>
+        <div class="status-section">
+          <div class="status-item">Ln 24, Col 1</div>
+          <div class="status-item">Words: 127</div>
+          <div class="status-item">Markdown</div>
+        </div>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

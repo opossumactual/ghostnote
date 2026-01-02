@@ -2,6 +2,18 @@
   import { editorStore } from "../stores/editor.svelte";
 
   let textareaRef: HTMLTextAreaElement | undefined = $state();
+  let lastPath: string | null = $state(null);
+
+  // Auto-focus textarea when a note is loaded
+  $effect(() => {
+    if (editorStore.path && editorStore.path !== lastPath) {
+      lastPath = editorStore.path;
+      // Small delay to ensure DOM is ready
+      requestAnimationFrame(() => {
+        textareaRef?.focus();
+      });
+    }
+  });
 
   function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
@@ -15,8 +27,8 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    // Force save on Ctrl+S
-    if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+    // Force save on Ctrl+S - explicitly check for 's' key
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       editorStore.save();
     }
@@ -36,6 +48,7 @@
       onkeydown={handleKeydown}
       placeholder="Start typing or use voice transcription..."
       spellcheck="true"
+      tabindex="0"
     ></textarea>
   {:else}
     <div class="empty-state">

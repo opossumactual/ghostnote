@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::Write;
+use std::panic;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, State};
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
@@ -195,10 +196,28 @@ pub async fn transcribe(audio_path: String, state: State<'_, AppState>) -> Resul
     }
 
     println!("Transcribing {} with model {}", audio_path, model_id);
+    println!("Model path: {:?}", model_path);
+
+    // Clone paths for the blocking thread
+    let audio_path_owned = audio_path.clone();
+    let model_path_owned = model_path.clone();
 
     // Run transcription in a blocking thread to avoid freezing the UI
+    // Wrap in catch_unwind to prevent panics from crashing the app
     let result = tokio::task::spawn_blocking(move || {
-        transcribe_blocking(&audio_path, &model_path)
+        panic::catch_unwind(panic::AssertUnwindSafe(|| {
+            transcribe_blocking(audio_path_owned, model_path_owned)
+        }))
+        .unwrap_or_else(|e| {
+            let panic_msg = if let Some(s) = e.downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = e.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "Unknown panic in Whisper transcription".to_string()
+            };
+            Err(format!("Whisper crashed: {}", panic_msg))
+        })
     })
     .await
     .map_err(|e| format!("Task failed: {:?}", e))??;
@@ -206,7 +225,7 @@ pub async fn transcribe(audio_path: String, state: State<'_, AppState>) -> Resul
     Ok(result)
 }
 
-fn transcribe_blocking(audio_path: &str, model_path: &std::path::Path) -> Result<String, String> {
+fn transcribe_blocking(audio_path: String, model_path: PathBuf) -> Result<String, String> {
     // Load the audio file
     let mut reader = hound::WavReader::open(audio_path).map_err(|e| e.to_string())?;
     let spec = reader.spec();
@@ -238,11 +257,19 @@ fn transcribe_blocking(audio_path: &str, model_path: &std::path::Path) -> Result
     };
 
     // Initialize Whisper
+    let model_path_str = model_path
+        .to_str()
+        .ok_or_else(|| "Invalid model path (non-UTF8 characters)".to_string())?;
+
+    println!("Loading Whisper model from: {}", model_path_str);
+
     let ctx = WhisperContext::new_with_params(
-        model_path.to_str().unwrap(),
+        model_path_str,
         WhisperContextParameters::default(),
     )
     .map_err(|e| format!("Failed to load Whisper model: {:?}", e))?;
+
+    println!("Whisper model loaded successfully");
 
     let mut whisper_state = ctx.create_state().map_err(|e| format!("Failed to create state: {:?}", e))?;
 

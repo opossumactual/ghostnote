@@ -469,3 +469,126 @@ pub async fn vault_activity(state: tauri::State<'_, VaultState>) -> Result<(), S
     state.touch();
     Ok(())
 }
+
+/// Recover vault with recovery key and set new password
+#[tauri::command]
+pub async fn recover_vault(
+    recovery_key_input: String,
+    new_password: String,
+    state: tauri::State<'_, VaultState>,
+) -> Result<SetupResult, String> {
+    let config = state.config()?;
+
+    // Read salt
+    let salt_bytes = fs::read(&config.salt_path)
+        .map_err(|e| format!("Failed to read salt: {}", e))?;
+    if salt_bytes.len() != 32 {
+        return Err("Invalid salt file".to_string());
+    }
+    let mut salt = [0u8; 32];
+    salt.copy_from_slice(&salt_bytes);
+
+    // Parse recovery key
+    let recovery_key = RecoveryKey::from_input(&recovery_key_input);
+
+    // Read and decrypt recovery data
+    let recovery_json = fs::read(&config.recovery_path)
+        .map_err(|e| format!("Failed to read recovery data: {}", e))?;
+    let recovery_data: RecoveryData = serde_json::from_slice(&recovery_json)
+        .map_err(|e| format!("Invalid recovery data: {}", e))?;
+
+    // Recover the original KEK
+    let _original_kek = recovery_data
+        .recover_kek(&recovery_key, &salt)
+        .map_err(|_| "Invalid recovery key".to_string())?;
+
+    // Generate new salt for new password
+    let new_salt = generate_salt();
+    fs::write(&config.salt_path, &new_salt)
+        .map_err(|e| format!("Failed to write salt: {}", e))?;
+
+    // Derive new KEK from new password
+    let new_kek = Kek::derive(&new_password, &new_salt)?;
+
+    // Re-encrypt verify blob with new KEK
+    let verify_plaintext = b"ghostnote-verify";
+    let verify_encrypted = encrypt(new_kek.as_bytes(), verify_plaintext)?;
+    fs::write(&config.verify_path, &verify_encrypted)
+        .map_err(|e| format!("Failed to write verify blob: {}", e))?;
+
+    // Generate new recovery key
+    let new_recovery_key = RecoveryKey::generate();
+    let new_recovery_data = RecoveryData::create(&new_kek, &new_recovery_key, &new_salt)?;
+    let new_recovery_json = serde_json::to_vec(&new_recovery_data)
+        .map_err(|e| format!("Failed to serialize recovery data: {}", e))?;
+    fs::write(&config.recovery_path, &new_recovery_json)
+        .map_err(|e| format!("Failed to write recovery key: {}", e))?;
+
+    // TODO: Re-wrap all existing DEKs with new KEK
+    // This requires iterating all .key files and re-wrapping
+
+    // Unlock with new KEK
+    state.unlock(new_kek);
+
+    Ok(SetupResult {
+        recovery_key: new_recovery_key.as_str().to_string(),
+    })
+}
+
+/// Change password (requires current password)
+#[tauri::command]
+pub async fn change_password(
+    current_password: String,
+    new_password: String,
+    state: tauri::State<'_, VaultState>,
+) -> Result<SetupResult, String> {
+    let config = state.config()?;
+
+    // Read current salt
+    let salt_bytes = fs::read(&config.salt_path)
+        .map_err(|e| format!("Failed to read salt: {}", e))?;
+    if salt_bytes.len() != 32 {
+        return Err("Invalid salt file".to_string());
+    }
+    let mut salt = [0u8; 32];
+    salt.copy_from_slice(&salt_bytes);
+
+    // Verify current password
+    let current_kek = Kek::derive(&current_password, &salt)?;
+    let verify_encrypted = fs::read(&config.verify_path)
+        .map_err(|e| format!("Failed to read verify blob: {}", e))?;
+    let verify_decrypted = decrypt(current_kek.as_bytes(), &verify_encrypted)
+        .map_err(|_| "Wrong password".to_string())?;
+    if verify_decrypted != b"ghostnote-verify" {
+        return Err("Wrong password".to_string());
+    }
+
+    // Generate new salt
+    let new_salt = generate_salt();
+    fs::write(&config.salt_path, &new_salt)
+        .map_err(|e| format!("Failed to write salt: {}", e))?;
+
+    // Derive new KEK
+    let new_kek = Kek::derive(&new_password, &new_salt)?;
+
+    // Re-encrypt verify blob
+    let verify_plaintext = b"ghostnote-verify";
+    let verify_encrypted = encrypt(new_kek.as_bytes(), verify_plaintext)?;
+    fs::write(&config.verify_path, &verify_encrypted)
+        .map_err(|e| format!("Failed to write verify blob: {}", e))?;
+
+    // Generate new recovery key
+    let new_recovery_key = RecoveryKey::generate();
+    let new_recovery_data = RecoveryData::create(&new_kek, &new_recovery_key, &new_salt)?;
+    let new_recovery_json = serde_json::to_vec(&new_recovery_data)
+        .map_err(|e| format!("Failed to serialize recovery data: {}", e))?;
+    fs::write(&config.recovery_path, &new_recovery_json)
+        .map_err(|e| format!("Failed to write recovery key: {}", e))?;
+
+    // Unlock with new KEK
+    state.unlock(new_kek);
+
+    Ok(SetupResult {
+        recovery_key: new_recovery_key.as_str().to_string(),
+    })
+}

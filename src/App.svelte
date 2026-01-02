@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import Toolbar from "./lib/components/Toolbar.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import NoteList from "./lib/components/NoteList.svelte";
@@ -19,6 +20,17 @@
   let showShortcuts = $state(false);
   let vaultReady = $state(false);
 
+  // Throttled activity tracking to reset auto-lock timer
+  let lastActivityTime = 0;
+  function trackActivity() {
+    const now = Date.now();
+    // Throttle to max once per second to avoid excessive IPC
+    if (now - lastActivityTime > 1000) {
+      lastActivityTime = now;
+      invoke('vault_activity').catch(() => {});
+    }
+  }
+
   onMount(async () => {
     themeStore.init();
     await vaultStore.checkStatus();
@@ -26,6 +38,9 @@
   });
 
   function handleKeydown(event: KeyboardEvent) {
+    // Track activity to reset auto-lock timer
+    trackActivity();
+
     // Close shortcuts on Escape
     if (event.key === "Escape" && showShortcuts) {
       showShortcuts = false;
@@ -119,7 +134,7 @@
   }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onclick={trackActivity} />
 
 {#if !vaultReady}
   <!-- Loading state while checking vault -->

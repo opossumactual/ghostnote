@@ -342,3 +342,61 @@ impl VaultState {
         inner.config.clone().ok_or_else(|| "Vault not configured".to_string())
     }
 }
+
+use std::fs;
+
+#[derive(serde::Serialize)]
+pub struct SetupResult {
+    pub recovery_key: String,
+}
+
+/// Initialize a new vault with password
+#[tauri::command]
+pub async fn setup_vault(
+    password: String,
+    state: tauri::State<'_, VaultState>,
+) -> Result<SetupResult, String> {
+    let config = state.config()?;
+
+    // Create vault directory
+    fs::create_dir_all(&config.vault_dir)
+        .map_err(|e| format!("Failed to create vault directory: {}", e))?;
+
+    // Generate salt
+    let salt = generate_salt();
+    fs::write(&config.salt_path, &salt)
+        .map_err(|e| format!("Failed to write salt: {}", e))?;
+
+    // Derive KEK from password
+    let kek = Kek::derive(&password, &salt)?;
+
+    // Create verification blob (encrypt a known string)
+    let verify_plaintext = b"ghostnote-verify";
+    let verify_encrypted = encrypt(kek.as_bytes(), verify_plaintext)?;
+    fs::write(&config.verify_path, &verify_encrypted)
+        .map_err(|e| format!("Failed to write verify blob: {}", e))?;
+
+    // Generate and store recovery key
+    let recovery_key = RecoveryKey::generate();
+    let recovery_data = RecoveryData::create(&kek, &recovery_key, &salt)?;
+    let recovery_json = serde_json::to_vec(&recovery_data)
+        .map_err(|e| format!("Failed to serialize recovery data: {}", e))?;
+    fs::write(&config.recovery_path, &recovery_json)
+        .map_err(|e| format!("Failed to write recovery key: {}", e))?;
+
+    // Unlock vault
+    state.unlock(kek);
+
+    Ok(SetupResult {
+        recovery_key: recovery_key.as_str().to_string(),
+    })
+}
+
+/// Check if vault is initialized
+#[tauri::command]
+pub async fn is_vault_setup(
+    state: tauri::State<'_, VaultState>,
+) -> Result<bool, String> {
+    let config = state.config()?;
+    Ok(is_vault_initialized(&config))
+}

@@ -155,3 +155,73 @@ pub fn unwrap_dek(kek: &Kek, wrapped_dek: &[u8]) -> Result<Dek, String> {
     arr.copy_from_slice(&dek_bytes);
     Ok(Dek::from_bytes(arr))
 }
+
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+/// Recovery key format: XXXX-XXXX-XXXX-XXXX-XXXX-XXXX (24 chars of base64)
+pub struct RecoveryKey(String);
+
+impl RecoveryKey {
+    /// Generate a new random recovery key
+    pub fn generate() -> Self {
+        let mut bytes = [0u8; 18]; // 18 bytes = 24 base64 chars
+        OsRng.fill_bytes(&mut bytes);
+        let encoded = BASE64.encode(bytes);
+
+        // Format as XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
+        let formatted = encoded
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(4)
+            .map(|c| c.iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("-");
+
+        RecoveryKey(formatted)
+    }
+
+    /// Get the display string
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Parse from user input (removes dashes)
+    pub fn from_input(input: &str) -> Self {
+        RecoveryKey(input.replace('-', "").replace(' ', ""))
+    }
+}
+
+/// Recovery data stored encrypted in vault
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct RecoveryData {
+    pub kek_bytes: Vec<u8>, // The actual KEK, encrypted with recovery key
+}
+
+impl RecoveryData {
+    /// Create recovery data by encrypting the KEK with a recovery-key-derived key
+    pub fn create(kek: &Kek, recovery_key: &RecoveryKey, salt: &[u8; 32]) -> Result<Self, String> {
+        // Derive a key from the recovery key
+        let recovery_kek = Kek::derive(&recovery_key.0.replace('-', ""), salt)?;
+
+        // Encrypt the original KEK with the recovery-derived key
+        let encrypted_kek = encrypt(recovery_kek.as_bytes(), kek.as_bytes())?;
+
+        Ok(RecoveryData {
+            kek_bytes: encrypted_kek,
+        })
+    }
+
+    /// Recover the KEK using the recovery key
+    pub fn recover_kek(&self, recovery_key: &RecoveryKey, salt: &[u8; 32]) -> Result<Kek, String> {
+        let recovery_kek = Kek::derive(&recovery_key.0.replace('-', ""), salt)?;
+        let kek_bytes = decrypt(recovery_kek.as_bytes(), &self.kek_bytes)?;
+
+        if kek_bytes.len() != 32 {
+            return Err("Invalid KEK size".to_string());
+        }
+
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(&kek_bytes);
+        Ok(Kek(arr))
+    }
+}

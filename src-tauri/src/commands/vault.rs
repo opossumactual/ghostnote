@@ -470,6 +470,13 @@ pub async fn vault_activity(state: tauri::State<'_, VaultState>) -> Result<(), S
     Ok(())
 }
 
+/// Set auto-lock timeout in seconds
+#[tauri::command]
+pub async fn set_lock_timeout(seconds: u64, state: tauri::State<'_, VaultState>) -> Result<(), String> {
+    state.set_timeout(seconds);
+    Ok(())
+}
+
 /// Recover vault with recovery key and set new password
 #[tauri::command]
 pub async fn recover_vault(

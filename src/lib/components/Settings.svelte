@@ -1,9 +1,11 @@
 <script lang="ts">
   import { listen } from "@tauri-apps/api/event";
+  import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
   import * as commands from "../utils/tauri-commands";
   import type { AudioDevice, WhisperModel, ModelStatus, DownloadProgress } from "../utils/tauri-commands";
   import { themeStore } from "../stores/theme.svelte";
+  import { vaultStore } from "../stores/vault.svelte";
 
   interface Props {
     visible: boolean;
@@ -26,6 +28,23 @@
 
   // Error state
   let error = $state<string | null>(null);
+
+  // Vault settings
+  let autoLockTimeout = $state(5);
+  let showChangePassword = $state(false);
+  let currentPassword = $state('');
+  let newPassword = $state('');
+  let confirmPassword = $state('');
+  let changingPassword = $state(false);
+  let passwordError = $state<string | null>(null);
+
+  const autoLockOptions = [
+    { value: 1, label: '1 minute' },
+    { value: 5, label: '5 minutes' },
+    { value: 10, label: '10 minutes' },
+    { value: 15, label: '15 minutes' },
+    { value: 30, label: '30 minutes' },
+  ];
 
   onMount(async () => {
     // Listen for download progress events
@@ -125,6 +144,53 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       onclose();
+    }
+  }
+
+  async function handleTimeoutChange(event: Event) {
+    const target = event.target as HTMLSelectElement;
+    const minutes = parseInt(target.value);
+    autoLockTimeout = minutes;
+    try {
+      await invoke('set_lock_timeout', { seconds: minutes * 60 });
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function handleLockNow() {
+    await vaultStore.lock();
+    onclose();
+  }
+
+  async function handleChangePassword() {
+    passwordError = null;
+
+    if (newPassword.length < 8) {
+      passwordError = 'New password must be at least 8 characters';
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      passwordError = 'Passwords do not match';
+      return;
+    }
+
+    changingPassword = true;
+    try {
+      await invoke('change_password', {
+        currentPassword,
+        newPassword
+      });
+      // Reset form
+      showChangePassword = false;
+      currentPassword = '';
+      newPassword = '';
+      confirmPassword = '';
+    } catch (e) {
+      passwordError = e instanceof Error ? e.message : String(e);
+    } finally {
+      changingPassword = false;
     }
   }
 
@@ -260,6 +326,76 @@
               </div>
             {/each}
           </div>
+        </section>
+
+        <!-- Vault Section -->
+        <section class="settings-section">
+          <h3>Vault Security</h3>
+          <p class="section-desc">Configure encryption and auto-lock settings</p>
+
+          <div class="vault-row">
+            <label for="autolock">Auto-lock after</label>
+            <select
+              id="autolock"
+              class="timeout-select"
+              value={autoLockTimeout}
+              onchange={handleTimeoutChange}
+            >
+              {#each autoLockOptions as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="vault-actions">
+            <button class="lock-btn" onclick={handleLockNow}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0110 0v4" />
+              </svg>
+              Lock Now
+            </button>
+
+            <button
+              class="change-password-toggle"
+              onclick={() => showChangePassword = !showChangePassword}
+            >
+              {showChangePassword ? 'Cancel' : 'Change Password'}
+            </button>
+          </div>
+
+          {#if showChangePassword}
+            <div class="change-password-form">
+              <input
+                type="password"
+                bind:value={currentPassword}
+                placeholder="Current password"
+                disabled={changingPassword}
+              />
+              <input
+                type="password"
+                bind:value={newPassword}
+                placeholder="New password (min 8 chars)"
+                disabled={changingPassword}
+              />
+              <input
+                type="password"
+                bind:value={confirmPassword}
+                placeholder="Confirm new password"
+                disabled={changingPassword}
+              />
+              {#if passwordError}
+                <p class="password-error">{passwordError}</p>
+              {/if}
+              <button
+                class="save-password-btn"
+                onclick={handleChangePassword}
+                disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              >
+                {changingPassword ? 'Changing...' : 'Save New Password'}
+              </button>
+            </div>
+          {/if}
         </section>
 
         <!-- Appearance Section -->
@@ -678,5 +814,112 @@
     font-size: 10px;
     color: var(--text-disabled);
     text-transform: uppercase;
+  }
+
+  /* Vault settings styles */
+  .vault-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+  }
+
+  .vault-row label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .timeout-select {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--surface-1);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+  }
+
+  .vault-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--accent);
+    color: var(--surface-0);
+    font-size: var(--font-size-sm);
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .lock-btn:hover {
+    background: var(--accent-hover);
+  }
+
+  .change-password-toggle {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .change-password-toggle:hover {
+    background: var(--surface-3);
+    color: var(--text-primary);
+  }
+
+  .change-password-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+  }
+
+  .change-password-form input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--surface-2);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    box-sizing: border-box;
+  }
+
+  .change-password-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .password-error {
+    color: var(--error);
+    font-size: var(--font-size-xs);
+    margin: 0;
+  }
+
+  .save-password-btn {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--accent);
+    color: var(--surface-0);
+    font-size: var(--font-size-sm);
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .save-password-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .save-password-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

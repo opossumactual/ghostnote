@@ -1,4 +1,4 @@
-# CLAUDE.md - opnotes
+# CLAUDE.md - onote
 
 A minimalist voice notes app with local Whisper transcription.
 
@@ -14,22 +14,24 @@ A minimalist voice notes app with local Whisper transcription.
 
 ```
 src/
-├── App.svelte              # Main app layout, keyboard shortcuts
+├── App.svelte              # Main app layout, keyboard shortcuts, theme init
 ├── lib/
 │   ├── components/
-│   │   ├── Toolbar.svelte        # Top bar with actions
+│   │   ├── Toolbar.svelte        # Top bar with window controls
 │   │   ├── Sidebar.svelte        # Folder tree, search, new folder
 │   │   ├── NoteList.svelte       # Note list with delete buttons
 │   │   ├── Editor.svelte         # Markdown editor textarea
 │   │   ├── StatusBar.svelte      # Word count, save status
 │   │   ├── RecordButton.svelte   # Recording button with spinner
-│   │   ├── Settings.svelte       # Audio device & model selection
+│   │   ├── Settings.svelte       # Audio, model, and theme selection
 │   │   └── KeyboardShortcuts.svelte  # Shortcuts overlay (Ctrl+/)
 │   ├── stores/
 │   │   ├── notes.svelte.ts       # Notes & folders state
 │   │   ├── editor.svelte.ts      # Editor content & save state
 │   │   ├── recording.svelte.ts   # Recording state & actions
+│   │   ├── theme.svelte.ts       # Theme state & persistence
 │   │   └── ui.svelte.ts          # UI state (panels, settings)
+│   ├── themes.ts                 # Theme definitions (6 presets)
 │   └── utils/
 │       └── tauri-commands.ts     # Typed Tauri command wrappers
 
@@ -59,6 +61,21 @@ npm run tauri build      # Build production release
 cd src-tauri && cargo check
 ```
 
+## Theme System
+
+6 built-in themes with localStorage persistence:
+
+| Theme | Type | Accent |
+|-------|------|--------|
+| Coral Terminal (default) | Dark | #ff8652 |
+| Synthwave | Dark | #ff6b9d |
+| Amber Terminal | Dark | #ffb347 |
+| Matrix | Dark | #39ff14 |
+| Light Classic | Light | #0066cc |
+| Light Warm | Light | #d97706 |
+
+Themes are defined in `src/lib/themes.ts` and applied via CSS custom properties.
+
 ## Architecture Notes
 
 ### Audio Recording (audio.rs)
@@ -69,7 +86,7 @@ cd src-tauri && cargo check
 - Saves WAV to `~/Documents/opnotes/.audio/`
 
 ### Whisper Transcription (whisper.rs)
-- Models downloaded from HuggingFace to `~/.local/share/opnotes/models/`
+- Models downloaded from HuggingFace to `~/.local/share/onote/models/`
 - Available models: tiny.en, base.en, small.en, medium.en
 - Transcription runs in `tokio::task::spawn_blocking` to avoid UI freeze
 - Returns plain text, auto-inserted at cursor position
@@ -101,7 +118,17 @@ cd src-tauri && cargo check
 
 - Notes: `~/Documents/opnotes/<folder>/<date>-<slug>.md`
 - Audio: `~/Documents/opnotes/.audio/recording_<timestamp>.wav`
-- Models: `~/.local/share/opnotes/models/ggml-<model>.bin`
+- Models: `~/.local/share/onote/models/ggml-<model>.bin`
+- Theme: `localStorage` key `opnotes-theme`
+
+## CI/CD
+
+GitHub Actions workflow in `.github/workflows/release.yml` builds for:
+- Windows (x64, ARM64)
+- macOS (Intel, Apple Silicon)
+- Linux (x64 deb, rpm, AppImage)
+
+Triggered by pushing a version tag: `git tag v0.1.0 && git push origin v0.1.0`
 
 ## Known Issues / TODOs
 

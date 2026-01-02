@@ -66,7 +66,7 @@
   }
 </script>
 
-<header class="toolbar" data-tauri-drag-region>
+<header class="toolbar">
   <div class="toolbar-left">
     <button
       class="toolbar-btn panel-toggle"
@@ -103,8 +103,11 @@
     <RecordButton />
   </div>
 
-  <div class="toolbar-center" data-tauri-drag-region>
-    <span class="app-title" data-tauri-drag-region>onote</span>
+  <!-- Drag region behind everything -->
+  <div class="toolbar-drag-region" data-tauri-drag-region></div>
+
+  <div class="toolbar-center">
+    <span class="app-title">onote</span>
   </div>
 
   <div class="toolbar-right">
@@ -173,18 +176,31 @@
     overflow: hidden;
   }
 
+  .toolbar-drag-region {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+  }
+
   .toolbar-left,
   .toolbar-right {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
   }
 
   .toolbar-center {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    z-index: 0;
+    pointer-events: none;
   }
 
   .app-title {

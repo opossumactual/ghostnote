@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { getCurrentWindow, type Window } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
   import RecordButton from "./RecordButton.svelte";
   import { notesStore } from "../stores/notes.svelte";
@@ -12,10 +12,12 @@
 
   let { onshowshortcuts }: Props = $props();
   let isMaximized = $state(false);
-
-  const appWindow = getCurrentWindow();
+  let appWindow: Window | null = $state(null);
 
   onMount(() => {
+    // Get window reference after mount
+    appWindow = getCurrentWindow();
+
     // Check initial maximized state
     appWindow.isMaximized().then((maximized) => {
       isMaximized = maximized;
@@ -23,7 +25,9 @@
 
     // Listen for window resize to update maximize state
     const unlisten = appWindow.onResized(async () => {
-      isMaximized = await appWindow.isMaximized();
+      if (appWindow) {
+        isMaximized = await appWindow.isMaximized();
+      }
     });
 
     return () => {
@@ -32,16 +36,22 @@
   });
 
   async function handleMinimize() {
-    await appWindow.minimize();
+    if (appWindow) {
+      await appWindow.minimize();
+    }
   }
 
   async function handleMaximize() {
-    await appWindow.toggleMaximize();
-    isMaximized = await appWindow.isMaximized();
+    if (appWindow) {
+      await appWindow.toggleMaximize();
+      isMaximized = await appWindow.isMaximized();
+    }
   }
 
   async function handleClose() {
-    await appWindow.close();
+    if (appWindow) {
+      await appWindow.close();
+    }
   }
 
   async function handleNewNote() {
@@ -93,8 +103,8 @@
     <RecordButton />
   </div>
 
-  <div class="toolbar-center">
-    <span class="app-title">onote</span>
+  <div class="toolbar-center" data-tauri-drag-region>
+    <span class="app-title" data-tauri-drag-region>onote</span>
   </div>
 
   <div class="toolbar-right">

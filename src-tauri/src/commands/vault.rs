@@ -99,3 +99,59 @@ pub fn generate_salt() -> [u8; 32] {
     OsRng.fill_bytes(&mut salt);
     salt
 }
+
+const NONCE_SIZE: usize = 12;
+
+/// Encrypt data with AES-256-GCM
+pub fn encrypt(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, String> {
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("Invalid key: {}", e))?;
+
+    let mut nonce_bytes = [0u8; NONCE_SIZE];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher
+        .encrypt(nonce, plaintext)
+        .map_err(|e| format!("Encryption failed: {}", e))?;
+
+    // Prepend nonce to ciphertext
+    let mut result = Vec::with_capacity(NONCE_SIZE + ciphertext.len());
+    result.extend_from_slice(&nonce_bytes);
+    result.extend_from_slice(&ciphertext);
+
+    Ok(result)
+}
+
+/// Decrypt data with AES-256-GCM
+pub fn decrypt(key: &[u8; 32], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
+    if ciphertext.len() < NONCE_SIZE {
+        return Err("Ciphertext too short".to_string());
+    }
+
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("Invalid key: {}", e))?;
+
+    let nonce = Nonce::from_slice(&ciphertext[..NONCE_SIZE]);
+    let encrypted_data = &ciphertext[NONCE_SIZE..];
+
+    cipher
+        .decrypt(nonce, encrypted_data)
+        .map_err(|e| format!("Decryption failed: {}", e))
+}
+
+/// Wrap a DEK with the KEK (encrypt the DEK)
+pub fn wrap_dek(kek: &Kek, dek: &Dek) -> Result<Vec<u8>, String> {
+    encrypt(kek.as_bytes(), dek.as_bytes())
+}
+
+/// Unwrap a DEK with the KEK (decrypt the DEK)
+pub fn unwrap_dek(kek: &Kek, wrapped_dek: &[u8]) -> Result<Dek, String> {
+    let dek_bytes = decrypt(kek.as_bytes(), wrapped_dek)?;
+    if dek_bytes.len() != 32 {
+        return Err("Invalid DEK size".to_string());
+    }
+    let mut arr = [0u8; 32];
+    arr.copy_from_slice(&dek_bytes);
+    Ok(Dek::from_bytes(arr))
+}

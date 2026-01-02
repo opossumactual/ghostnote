@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Toolbar from "./lib/components/Toolbar.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import NoteList from "./lib/components/NoteList.svelte";
@@ -10,8 +11,13 @@
   import { notesStore } from "./lib/stores/notes.svelte";
   import { editorStore } from "./lib/stores/editor.svelte";
   import { recordingStore } from "./lib/stores/recording.svelte";
+  import { themeStore } from "./lib/stores/theme.svelte";
 
   let showShortcuts = $state(false);
+
+  onMount(() => {
+    themeStore.init();
+  });
 
   function handleKeydown(event: KeyboardEvent) {
     // Close shortcuts on Escape
@@ -46,6 +52,10 @@
             event.preventDefault();
             handleToggleRecording();
           }
+          break;
+        case "s":
+          // Prevent browser save dialog - actual save is handled by Editor
+          event.preventDefault();
           break;
         case "/":
           event.preventDefault();

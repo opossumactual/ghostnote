@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import * as commands from "../utils/tauri-commands";
   import type { AudioDevice, WhisperModel, ModelStatus, DownloadProgress } from "../utils/tauri-commands";
+  import { themeStore } from "../stores/theme.svelte";
 
   interface Props {
     visible: boolean;
@@ -260,6 +261,32 @@
             {/each}
           </div>
         </section>
+
+        <!-- Appearance Section -->
+        <section class="settings-section">
+          <h3>Appearance</h3>
+          <p class="section-desc">Choose your preferred color theme</p>
+
+          <div class="theme-grid">
+            {#each themeStore.themes as theme}
+              <button
+                class="theme-card"
+                class:selected={themeStore.currentThemeId === theme.id}
+                onclick={() => themeStore.setTheme(theme.id)}
+              >
+                <div class="theme-preview" style="
+                  background: {theme.colors.surface0};
+                  border-color: {theme.colors.borderDefault};
+                ">
+                  <div class="preview-accent" style="background: {theme.colors.accent}"></div>
+                  <div class="preview-text" style="color: {theme.colors.textPrimary}">Aa</div>
+                </div>
+                <span class="theme-name">{theme.name}</span>
+                <span class="theme-type">{theme.type}</span>
+              </button>
+            {/each}
+          </div>
+        </section>
       </div>
 
       <footer class="panel-footer">
@@ -408,12 +435,30 @@
     color: var(--text-primary);
     font-size: var(--font-size-sm);
     cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a06048' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .device-select option,
+  .model-select option {
+    background: var(--surface-1);
+    color: var(--text-primary);
+    padding: var(--space-sm);
   }
 
   .device-select:focus,
   .model-select:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  /* Light theme dropdown arrow fix */
+  :global([data-theme-type="light"]) .device-select,
+  :global([data-theme-type="light"]) .model-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235f6368' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   }
 
   .refresh-btn {
@@ -567,5 +612,71 @@
     background: var(--surface-0);
     border: 1px solid var(--border-subtle);
     border-radius: 3px;
+  }
+
+  /* Theme picker styles */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+  }
+
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--surface-1);
+    border: 2px solid var(--border-subtle);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .theme-card:hover {
+    border-color: var(--border-default);
+  }
+
+  .theme-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .theme-preview {
+    width: 100%;
+    height: 48px;
+    border-radius: 4px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preview-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+  }
+
+  .preview-text {
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+
+  .theme-name {
+    font-size: var(--font-size-xs);
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .theme-type {
+    font-size: 10px;
+    color: var(--text-disabled);
+    text-transform: uppercase;
   }
 </style>

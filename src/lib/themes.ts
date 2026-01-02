@@ -1,0 +1,239 @@
+export interface Theme {
+  id: string;
+  name: string;
+  type: 'dark' | 'light';
+  colors: {
+    // Surfaces
+    surface0: string;
+    surface1: string;
+    surface2: string;
+    surface3: string;
+    surface4: string;
+    // Text
+    textPrimary: string;
+    textSecondary: string;
+    textDisabled: string;
+    textGhost: string;
+    // Accent
+    accent: string;
+    accentHover: string;
+    accentMuted: string;
+    accentGlow: string;
+    accentDim: string;
+    // Recording (can match accent or be distinct)
+    recording: string;
+    recordingGlow: string;
+    recordingDim: string;
+    // Semantic
+    success: string;
+    warning: string;
+    error: string;
+    errorDim: string;
+    // Borders
+    borderSubtle: string;
+    borderDefault: string;
+    borderStrong: string;
+    divider: string;
+  };
+}
+
+export const themes: Theme[] = [
+  {
+    id: 'coral',
+    name: 'Coral Terminal',
+    type: 'dark',
+    colors: {
+      surface0: '#050404',
+      surface1: '#0a0807',
+      surface2: '#110e0c',
+      surface3: '#1a1512',
+      surface4: '#241d19',
+      textPrimary: '#ff8652',
+      textSecondary: '#d4804a',
+      textDisabled: '#a06048',
+      textGhost: '#6a4538',
+      accent: '#ff8652',
+      accentHover: '#ffa070',
+      accentMuted: '#cc4f22',
+      accentGlow: 'rgba(255, 134, 82, 0.5)',
+      accentDim: 'rgba(255, 134, 82, 0.25)',
+      recording: '#ff7040',
+      recordingGlow: 'rgba(255, 112, 64, 0.5)',
+      recordingDim: 'rgba(255, 112, 64, 0.25)',
+      success: '#4ade80',
+      warning: '#ffa070',
+      error: '#e55f30',
+      errorDim: 'rgba(229, 95, 48, 0.25)',
+      borderSubtle: 'rgba(255, 134, 82, 0.1)',
+      borderDefault: 'rgba(255, 134, 82, 0.18)',
+      borderStrong: 'rgba(255, 134, 82, 0.28)',
+      divider: 'rgba(255, 134, 82, 0.12)',
+    },
+  },
+  {
+    id: 'pink',
+    name: 'Synthwave',
+    type: 'dark',
+    colors: {
+      surface0: '#0a0510',
+      surface1: '#120a18',
+      surface2: '#1a1022',
+      surface3: '#24162e',
+      surface4: '#2e1c3a',
+      textPrimary: '#ff6b9d',
+      textSecondary: '#d45a85',
+      textDisabled: '#a04a6d',
+      textGhost: '#6a3550',
+      accent: '#ff6b9d',
+      accentHover: '#ff8fb8',
+      accentMuted: '#cc3366',
+      accentGlow: 'rgba(255, 107, 157, 0.5)',
+      accentDim: 'rgba(255, 107, 157, 0.25)',
+      recording: '#ff4f8a',
+      recordingGlow: 'rgba(255, 79, 138, 0.5)',
+      recordingDim: 'rgba(255, 79, 138, 0.25)',
+      success: '#4ade80',
+      warning: '#ff8fb8',
+      error: '#ff4f6a',
+      errorDim: 'rgba(255, 79, 106, 0.25)',
+      borderSubtle: 'rgba(255, 107, 157, 0.1)',
+      borderDefault: 'rgba(255, 107, 157, 0.18)',
+      borderStrong: 'rgba(255, 107, 157, 0.28)',
+      divider: 'rgba(255, 107, 157, 0.12)',
+    },
+  },
+  {
+    id: 'amber',
+    name: 'Amber Terminal',
+    type: 'dark',
+    colors: {
+      surface0: '#050403',
+      surface1: '#0a0806',
+      surface2: '#110f0a',
+      surface3: '#1a1610',
+      surface4: '#241e16',
+      textPrimary: '#ffb347',
+      textSecondary: '#d49a3a',
+      textDisabled: '#a07828',
+      textGhost: '#6a5520',
+      accent: '#ffb347',
+      accentHover: '#ffc56e',
+      accentMuted: '#cc8a22',
+      accentGlow: 'rgba(255, 179, 71, 0.5)',
+      accentDim: 'rgba(255, 179, 71, 0.25)',
+      recording: '#ffa030',
+      recordingGlow: 'rgba(255, 160, 48, 0.5)',
+      recordingDim: 'rgba(255, 160, 48, 0.25)',
+      success: '#4ade80',
+      warning: '#ffc56e',
+      error: '#e55f30',
+      errorDim: 'rgba(229, 95, 48, 0.25)',
+      borderSubtle: 'rgba(255, 179, 71, 0.1)',
+      borderDefault: 'rgba(255, 179, 71, 0.18)',
+      borderStrong: 'rgba(255, 179, 71, 0.28)',
+      divider: 'rgba(255, 179, 71, 0.12)',
+    },
+  },
+  {
+    id: 'neon',
+    name: 'Matrix',
+    type: 'dark',
+    colors: {
+      surface0: '#020504',
+      surface1: '#040a07',
+      surface2: '#08120c',
+      surface3: '#0c1a12',
+      surface4: '#102418',
+      textPrimary: '#39ff14',
+      textSecondary: '#2dd410',
+      textDisabled: '#22a00c',
+      textGhost: '#186a08',
+      accent: '#39ff14',
+      accentHover: '#5fff40',
+      accentMuted: '#22aa0a',
+      accentGlow: 'rgba(57, 255, 20, 0.5)',
+      accentDim: 'rgba(57, 255, 20, 0.25)',
+      recording: '#ff3939',
+      recordingGlow: 'rgba(255, 57, 57, 0.5)',
+      recordingDim: 'rgba(255, 57, 57, 0.25)',
+      success: '#39ff14',
+      warning: '#ffff39',
+      error: '#ff3939',
+      errorDim: 'rgba(255, 57, 57, 0.25)',
+      borderSubtle: 'rgba(57, 255, 20, 0.1)',
+      borderDefault: 'rgba(57, 255, 20, 0.18)',
+      borderStrong: 'rgba(57, 255, 20, 0.28)',
+      divider: 'rgba(57, 255, 20, 0.12)',
+    },
+  },
+  {
+    id: 'light',
+    name: 'Light Classic',
+    type: 'light',
+    colors: {
+      surface0: '#ffffff',
+      surface1: '#f8f9fa',
+      surface2: '#f1f3f4',
+      surface3: '#e8eaed',
+      surface4: '#dadce0',
+      textPrimary: '#202124',
+      textSecondary: '#5f6368',
+      textDisabled: '#9aa0a6',
+      textGhost: '#bdc1c6',
+      accent: '#0066cc',
+      accentHover: '#0052a3',
+      accentMuted: '#4a90d9',
+      accentGlow: 'rgba(0, 102, 204, 0.3)',
+      accentDim: 'rgba(0, 102, 204, 0.1)',
+      recording: '#dc3545',
+      recordingGlow: 'rgba(220, 53, 69, 0.3)',
+      recordingDim: 'rgba(220, 53, 69, 0.1)',
+      success: '#28a745',
+      warning: '#ffc107',
+      error: '#dc3545',
+      errorDim: 'rgba(220, 53, 69, 0.1)',
+      borderSubtle: 'rgba(0, 0, 0, 0.06)',
+      borderDefault: 'rgba(0, 0, 0, 0.12)',
+      borderStrong: 'rgba(0, 0, 0, 0.2)',
+      divider: 'rgba(0, 0, 0, 0.08)',
+    },
+  },
+  {
+    id: 'warm',
+    name: 'Light Warm',
+    type: 'light',
+    colors: {
+      surface0: '#fefdfb',
+      surface1: '#faf8f5',
+      surface2: '#f5f2ed',
+      surface3: '#eae5dc',
+      surface4: '#ddd6c8',
+      textPrimary: '#3d3229',
+      textSecondary: '#6b5d4d',
+      textDisabled: '#9a8b78',
+      textGhost: '#c4b8a8',
+      accent: '#d97706',
+      accentHover: '#b45309',
+      accentMuted: '#f59e0b',
+      accentGlow: 'rgba(217, 119, 6, 0.3)',
+      accentDim: 'rgba(217, 119, 6, 0.1)',
+      recording: '#dc2626',
+      recordingGlow: 'rgba(220, 38, 38, 0.3)',
+      recordingDim: 'rgba(220, 38, 38, 0.1)',
+      success: '#16a34a',
+      warning: '#f59e0b',
+      error: '#dc2626',
+      errorDim: 'rgba(220, 38, 38, 0.1)',
+      borderSubtle: 'rgba(61, 50, 41, 0.06)',
+      borderDefault: 'rgba(61, 50, 41, 0.12)',
+      borderStrong: 'rgba(61, 50, 41, 0.2)',
+      divider: 'rgba(61, 50, 41, 0.08)',
+    },
+  },
+];
+
+export const defaultTheme = 'coral';
+
+export function getTheme(id: string): Theme {
+  return themes.find(t => t.id === id) || themes[0];
+}

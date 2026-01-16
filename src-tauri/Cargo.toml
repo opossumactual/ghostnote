@@ -22,8 +22,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 dirs = "5"
 
-# Audio and transcription
-whisper-rs = "0.14"
+# Audio recording
 cpal = "0.15"
 hound = "3.5"
 ringbuf = "0.4"
@@ -37,6 +36,10 @@ argon2 = "0.5"
 zeroize = { version = "1.8", features = ["derive"] }
 rand = "0.8"
 base64 = "0.22"
+
+# whisper-rs only on non-macOS (macOS uses subprocess with whisper-cli)
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+whisper-rs = "0.14"
 
 [profile.release]
 panic = "abort"

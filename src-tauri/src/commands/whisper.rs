@@ -1,9 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::Write;
-use std::panic;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, State};
+
+#[cfg(not(target_os = "macos"))]
+use std::panic;
+#[cfg(not(target_os = "macos"))]
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
 use crate::AppState;
@@ -184,6 +187,7 @@ pub async fn download_model(model_id: String, app: AppHandle) -> Result<String, 
 }
 
 /// Transcribe audio samples directly (memory-only, no disk access)
+/// On macOS, uses whisper-cli subprocess. On other platforms, uses whisper-rs library.
 #[tauri::command]
 pub async fn transcribe(
     samples: Vec<f32>,
@@ -206,32 +210,97 @@ pub async fn transcribe(
     );
     println!("Model path: {:?}", model_path);
 
-    // Clone model path for the blocking thread
-    let model_path_owned = model_path.clone();
+    #[cfg(target_os = "macos")]
+    {
+        transcribe_macos(samples, model_path).await
+    }
 
-    // Run transcription in a blocking thread to avoid freezing the UI
-    // Wrap in catch_unwind to prevent panics from crashing the app
-    let result = tokio::task::spawn_blocking(move || {
-        panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            transcribe_blocking(samples, model_path_owned)
-        }))
-        .unwrap_or_else(|e| {
-            let panic_msg = if let Some(s) = e.downcast_ref::<&str>() {
-                s.to_string()
-            } else if let Some(s) = e.downcast_ref::<String>() {
-                s.clone()
-            } else {
-                "Unknown panic in Whisper transcription".to_string()
-            };
-            Err(format!("Whisper crashed: {}", panic_msg))
+    #[cfg(not(target_os = "macos"))]
+    {
+        let model_path_owned = model_path.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                transcribe_blocking(samples, model_path_owned)
+            }))
+            .unwrap_or_else(|e| {
+                let panic_msg = if let Some(s) = e.downcast_ref::<&str>() {
+                    s.to_string()
+                } else if let Some(s) = e.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "Unknown panic in Whisper transcription".to_string()
+                };
+                Err(format!("Whisper crashed: {}", panic_msg))
+            })
         })
-    })
-    .await
-    .map_err(|e| format!("Task failed: {:?}", e))??;
+        .await
+        .map_err(|e| format!("Task failed: {:?}", e))??;
+
+        Ok(result)
+    }
+}
+
+/// macOS: Use whisper-cli subprocess (requires `brew install whisper-cpp`)
+#[cfg(target_os = "macos")]
+async fn transcribe_macos(samples: Vec<f32>, model_path: PathBuf) -> Result<String, String> {
+    use std::process::Command;
+    use hound::{WavSpec, WavWriter};
+
+    // Write samples to a temporary WAV file
+    let temp_dir = std::env::temp_dir();
+    let temp_wav = temp_dir.join(format!("ghostnote_temp_{}.wav", std::process::id()));
+
+    let spec = WavSpec {
+        channels: 1,
+        sample_rate: 16000,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+
+    let mut writer = WavWriter::create(&temp_wav, spec)
+        .map_err(|e| format!("Failed to create temp WAV: {}", e))?;
+
+    for sample in &samples {
+        writer.write_sample(*sample)
+            .map_err(|e| format!("Failed to write sample: {}", e))?;
+    }
+    writer.finalize()
+        .map_err(|e| format!("Failed to finalize WAV: {}", e))?;
+
+    // Run whisper-cli
+    let output = Command::new("whisper-cli")
+        .args([
+            "-m", model_path.to_str().unwrap(),
+            "-f", temp_wav.to_str().unwrap(),
+            "-l", "en",
+            "--no-timestamps",
+            "-otxt",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run whisper-cli (is whisper-cpp installed via homebrew?): {}", e))?;
+
+    // Clean up temp file
+    fs::remove_file(&temp_wav).ok();
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("whisper-cli failed: {}", stderr));
+    }
+
+    // Read the output text file
+    let txt_path = temp_wav.with_extension("txt");
+    let result = fs::read_to_string(&txt_path)
+        .unwrap_or_else(|_| String::from_utf8_lossy(&output.stdout).to_string());
+    fs::remove_file(&txt_path).ok();
+
+    let result = result.trim().to_string();
+    println!("Transcription: {}", result);
 
     Ok(result)
 }
 
+/// Linux/Windows: Use whisper-rs library directly
+#[cfg(not(target_os = "macos"))]
 fn transcribe_blocking(mut samples: Vec<f32>, model_path: PathBuf) -> Result<String, String> {
     // Samples are already 16kHz mono from stop_recording
 

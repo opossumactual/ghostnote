@@ -61,10 +61,15 @@ async function save() {
   if (!path || !isDirty) return;
 
   isSaving = true;
+  // Capture content at save time to detect changes during save
+  const contentToSave = content;
   try {
-    await saveNote(path, content);
-    isDirty = false;
-    lastSavedTitle = getTitle(content);
+    await saveNote(path, contentToSave);
+    // Only clear dirty flag if content hasn't changed during save
+    if (content === contentToSave) {
+      isDirty = false;
+    }
+    lastSavedTitle = getTitle(contentToSave);
     // Refresh notes list to update title/preview in sidebar
     await notesStore.loadNotes(notesStore.selectedFolder);
   } catch (error) {

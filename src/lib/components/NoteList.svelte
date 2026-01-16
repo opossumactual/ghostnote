@@ -1,10 +1,12 @@
 <script lang="ts">
   import { notesStore } from "../stores/notes.svelte";
   import { editorStore } from "../stores/editor.svelte";
+  import { uiStore } from "../stores/ui.svelte";
 
   function selectNote(id: string, path: string) {
     notesStore.selectNote(id);
     editorStore.loadNote(path);
+    uiStore.setFocusedPanel('notes');
   }
 
   async function handleDelete(event: MouseEvent, path: string) {
@@ -46,9 +48,6 @@
           class="note-item"
           class:selected={notesStore.selectedNoteId === note.id}
           onclick={() => selectNote(note.id, note.path)}
-          onkeydown={(e) => e.key === "Enter" && selectNote(note.id, note.path)}
-          role="button"
-          tabindex="0"
         >
           <div class="note-content">
             <div class="note-title">{note.title}</div>
@@ -180,12 +179,13 @@
     transition: all var(--transition-fast);
     cursor: pointer;
     margin-bottom: 4px;
+    outline: none;
   }
 
-  .note-item:hover {
+  .note-item:hover:not(.selected) {
     background: var(--surface-3);
     border-color: var(--text-ghost);
-    border-left-color: var(--accent);
+    border-left-color: var(--text-ghost);
   }
 
   .note-item.selected {

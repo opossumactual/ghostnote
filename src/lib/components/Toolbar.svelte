@@ -5,6 +5,7 @@
   import { notesStore } from "../stores/notes.svelte";
   import { editorStore } from "../stores/editor.svelte";
   import { uiStore } from "../stores/ui.svelte";
+  import { vaultStore } from "../stores/vault.svelte";
 
   interface Props {
     onshowshortcuts?: () => void;
@@ -120,6 +121,13 @@
         <circle cx="12" cy="12" r="10" />
         <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
         <path d="M12 17h.01" />
+      </svg>
+    </button>
+
+    <button class="toolbar-btn" onclick={() => vaultStore.lock()} title="Lock vault">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0110 0v4" />
       </svg>
     </button>
 

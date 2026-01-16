@@ -118,10 +118,9 @@
     try {
       await commands.downloadModel(modelId);
 
-      // Refresh status
+      // Refresh status - create new Map to trigger Svelte 5 reactivity
       const status = await commands.getModelStatus(modelId);
-      modelStatuses.set(modelId, status);
-      modelStatuses = modelStatuses; // Trigger reactivity
+      modelStatuses = new Map(modelStatuses).set(modelId, status);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -134,10 +133,9 @@
     try {
       await commands.deleteModel(modelId);
 
-      // Refresh status
+      // Refresh status - create new Map to trigger Svelte 5 reactivity
       const status = await commands.getModelStatus(modelId);
-      modelStatuses.set(modelId, status);
-      modelStatuses = modelStatuses; // Trigger reactivity
+      modelStatuses = new Map(modelStatuses).set(modelId, status);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }

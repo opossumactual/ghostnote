@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { notesStore } from "../stores/notes.svelte";
+  import { uiStore } from "../stores/ui.svelte";
   import { searchNotes, renameFolder, type SearchResult } from "../utils/tauri-commands";
 
   let searchQuery = $state("");
@@ -35,6 +37,7 @@
     searchQuery = "";
     searchResults = [];
     notesStore.selectFolder(path);
+    uiStore.setFocusedPanel('folders');
   }
 
   function selectSearchResult(path: string) {
@@ -71,10 +74,16 @@
     }
   }
 
-  function startRename(event: MouseEvent, path: string, name: string) {
+  async function startRename(event: MouseEvent, path: string, name: string) {
     event.stopPropagation();
     renamingFolder = path;
     renameValue = name;
+    await tick();
+    const input = document.querySelector('.rename-input') as HTMLInputElement;
+    if (input) {
+      input.focus();
+      input.select();
+    }
   }
 
   async function handleRename(oldPath: string) {
@@ -173,9 +182,6 @@
           class="folder-item"
           class:selected={notesStore.selectedFolder === folder.path}
           onclick={() => renamingFolder !== folder.path && selectFolder(folder.path)}
-          onkeydown={(e) => e.key === "Enter" && renamingFolder !== folder.path && selectFolder(folder.path)}
-          role="button"
-          tabindex="0"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
@@ -197,6 +203,7 @@
               class="folder-action-btn"
               onclick={(e) => startRename(e, folder.path, folder.name)}
               title="Rename folder"
+              tabindex={-1}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -206,6 +213,7 @@
               class="folder-action-btn delete-btn"
               onclick={(e) => handleDeleteFolder(e, folder.path, folder.name)}
               title="Delete folder"
+              tabindex={-1}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
@@ -219,9 +227,6 @@
             class="folder-item nested"
             class:selected={notesStore.selectedFolder === child.path}
             onclick={() => renamingFolder !== child.path && selectFolder(child.path)}
-            onkeydown={(e) => e.key === "Enter" && renamingFolder !== child.path && selectFolder(child.path)}
-            role="button"
-            tabindex="0"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
@@ -243,6 +248,7 @@
                 class="folder-action-btn"
                 onclick={(e) => startRename(e, child.path, child.name)}
                 title="Rename folder"
+                tabindex={-1}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -252,6 +258,7 @@
                 class="folder-action-btn delete-btn"
                 onclick={(e) => handleDeleteFolder(e, child.path, child.name)}
                 title="Delete folder"
+                tabindex={-1}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
@@ -436,12 +443,13 @@
     text-align: left;
     width: 100%;
     transition: all var(--transition-fast);
+    outline: none;
   }
 
-  .folder-item:hover {
-    background: var(--accent-dim);
+  .folder-item:hover:not(.selected) {
+    background: var(--surface-2);
     color: var(--text-primary);
-    border-left-color: var(--accent);
+    border-left-color: var(--text-ghost);
   }
 
   .folder-item.selected {

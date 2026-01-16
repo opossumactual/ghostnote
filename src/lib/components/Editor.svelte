@@ -1,17 +1,14 @@
 <script lang="ts">
   import { editorStore } from "../stores/editor.svelte";
+  import { uiStore } from "../stores/ui.svelte";
 
   let textareaRef: HTMLTextAreaElement | undefined = $state();
   let lastPath: string | null = $state(null);
 
-  // Auto-focus textarea when a note is loaded
+  // Track path changes (focus is handled by App.svelte when entering editor)
   $effect(() => {
     if (editorStore.path && editorStore.path !== lastPath) {
       lastPath = editorStore.path;
-      // Small delay to ensure DOM is ready
-      requestAnimationFrame(() => {
-        textareaRef?.focus();
-      });
     }
   });
 
@@ -24,6 +21,10 @@
     if (textareaRef) {
       editorStore.updateCursor(textareaRef.selectionStart);
     }
+  }
+
+  function handleFocus() {
+    uiStore.setFocusedPanel('editor');
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -44,6 +45,7 @@
       oninput={handleInput}
       onselect={handleSelect}
       onclick={handleSelect}
+      onfocus={handleFocus}
       onkeyup={handleSelect}
       onkeydown={handleKeydown}
       placeholder="Start typing or use voice transcription..."

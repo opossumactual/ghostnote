@@ -30,10 +30,10 @@ async function loadFolders() {
 }
 
 async function loadNotes(folder: string) {
+  selectedFolder = folder;  // Set immediately for instant UI feedback
   isLoading = true;
   try {
     notes = await listNotes(folder);
-    selectedFolder = folder;
     // Select first note if any
     if (notes.length > 0 && !selectedNoteId) {
       selectedNoteId = notes[0].id;
@@ -74,8 +74,57 @@ function selectNote(id: string) {
   selectedNoteId = id;
 }
 
-function selectFolder(path: string) {
-  loadNotes(path);
+function selectNextNote(): string | null {
+  if (notes.length === 0) return null;
+  const currentIndex = notes.findIndex(n => n.id === selectedNoteId);
+  const nextIndex = currentIndex < notes.length - 1 ? currentIndex + 1 : 0;
+  selectedNoteId = notes[nextIndex].id;
+  return notes[nextIndex].path;
+}
+
+function selectPreviousNote(): string | null {
+  if (notes.length === 0) return null;
+  const currentIndex = notes.findIndex(n => n.id === selectedNoteId);
+  const prevIndex = currentIndex > 0 ? currentIndex - 1 : notes.length - 1;
+  selectedNoteId = notes[prevIndex].id;
+  return notes[prevIndex].path;
+}
+
+function getSelectedNotePath(): string | null {
+  const note = notes.find(n => n.id === selectedNoteId);
+  return note?.path ?? null;
+}
+
+// Get flat list of all folders for navigation
+function getAllFolders(): { path: string; name: string }[] {
+  const result: { path: string; name: string }[] = [];
+  for (const folder of folders) {
+    result.push({ path: folder.path, name: folder.name });
+    for (const child of folder.children) {
+      result.push({ path: child.path, name: child.name });
+    }
+  }
+  return result;
+}
+
+async function selectNextFolder(): Promise<void> {
+  const allFolders = getAllFolders();
+  if (allFolders.length === 0) return;
+  const currentIndex = allFolders.findIndex(f => f.path === selectedFolder);
+  const nextIndex = currentIndex < allFolders.length - 1 ? currentIndex + 1 : 0;
+  await selectFolder(allFolders[nextIndex].path);
+}
+
+async function selectPreviousFolder(): Promise<void> {
+  const allFolders = getAllFolders();
+  if (allFolders.length === 0) return;
+  const currentIndex = allFolders.findIndex(f => f.path === selectedFolder);
+  const prevIndex = currentIndex > 0 ? currentIndex - 1 : allFolders.length - 1;
+  await selectFolder(allFolders[prevIndex].path);
+}
+
+async function selectFolder(path: string) {
+  await loadNotes(path);
 }
 
 async function addFolder(name: string, parent?: string) {
@@ -129,7 +178,12 @@ export const notesStore = {
   addNote,
   removeNote,
   selectNote,
+  selectNextNote,
+  selectPreviousNote,
+  getSelectedNotePath,
   selectFolder,
+  selectNextFolder,
+  selectPreviousFolder,
   addFolder,
   removeFolder,
 };

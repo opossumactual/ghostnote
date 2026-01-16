@@ -13,7 +13,10 @@
     { keys: ["Ctrl", "R"], action: "Toggle recording" },
     { keys: ["Ctrl", "S"], action: "Save note" },
     { keys: ["Ctrl", "/"], action: "Show shortcuts" },
-    { keys: ["Delete"], action: "Delete selected note" },
+    { keys: ["↑", "/", "↓"], action: "Navigate in panel" },
+    { keys: ["←", "/", "→"], action: "Switch panels" },
+    { keys: ["Enter"], action: "Enter panel / Open note" },
+    { keys: ["Ctrl", "D"], action: "Delete note/folder" },
     { keys: ["Esc"], action: "Close dialogs" },
   ];
 

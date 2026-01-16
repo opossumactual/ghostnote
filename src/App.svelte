@@ -37,7 +37,7 @@
     vaultReady = true;
   });
 
-  function handleKeydown(event: KeyboardEvent) {
+  async function handleKeydown(event: KeyboardEvent) {
     // Track activity to reset auto-lock timer
     trackActivity();
 
@@ -47,10 +47,110 @@
       return;
     }
 
-    // Delete selected note (only when not in an input/textarea)
+    // Delete selected note/folder (only when not in an input/textarea)
     if (event.key === "Delete" && !isInputFocused()) {
       event.preventDefault();
-      handleDeleteSelectedNote();
+      handleDelete();
+      return;
+    }
+
+    // Panel-based keyboard navigation (only when not in an input/textarea)
+    if (!isInputFocused()) {
+      const panel = uiStore.focusedPanel;
+
+      // Up/Down: navigate within current panel
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (panel === 'folders' || (panel === 'notes' && uiStore.sidebarVisible && notesStore.notes.length === 0)) {
+          // Navigate folders and preview first note
+          uiStore.setFocusedPanel('folders');
+          if (event.key === "ArrowDown") {
+            await notesStore.selectNextFolder();
+          } else {
+            await notesStore.selectPreviousFolder();
+          }
+          // Load first note as preview
+          if (notesStore.notes.length > 0) {
+            notesStore.selectNote(notesStore.notes[0].id);
+            editorStore.loadNote(notesStore.notes[0].path);
+          }
+        } else {
+          // Navigate notes and auto-load into editor
+          uiStore.setFocusedPanel('notes');
+          if (notesStore.notes.length > 0) {
+            // Check if current selection exists in this folder's notes
+            const noteExists = notesStore.notes.some(n => n.id === notesStore.selectedNoteId);
+            if (!noteExists) {
+              // Select first note if no valid selection
+              notesStore.selectNote(notesStore.notes[0].id);
+            } else if (event.key === "ArrowDown") {
+              notesStore.selectNextNote();
+            } else {
+              notesStore.selectPreviousNote();
+            }
+            // Auto-load selected note into editor
+            const path = notesStore.getSelectedNotePath();
+            if (path) {
+              editorStore.loadNote(path);
+            }
+          }
+        }
+        return;
+      }
+
+      // Right/Enter: move to next panel or enter editor
+      if (event.key === "ArrowRight" || event.key === "Enter") {
+        event.preventDefault();
+        if (panel === 'folders') {
+          // Move to notes panel and ensure a valid note is selected
+          uiStore.setFocusedPanel('notes');
+          if (notesStore.notes.length > 0) {
+            // Check if current selection exists in this folder's notes
+            const noteExists = notesStore.notes.some(n => n.id === notesStore.selectedNoteId);
+            if (!noteExists) {
+              notesStore.selectNote(notesStore.notes[0].id);
+            }
+            // Load the note into editor (preview only, no focus)
+            const path = notesStore.getSelectedNotePath();
+            if (path) {
+              editorStore.loadNote(path);
+            }
+          }
+        } else if (panel === 'notes') {
+          // Load selected note and move to editor
+          const path = notesStore.getSelectedNotePath();
+          if (path) {
+            editorStore.loadNote(path);
+            uiStore.setFocusedPanel('editor');
+            // Focus the editor textarea
+            setTimeout(() => {
+              const editor = document.querySelector('.editor-textarea') as HTMLTextAreaElement;
+              editor?.focus();
+            }, 0);
+          }
+        }
+        return;
+      }
+
+      // Left: move to previous panel
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        if (panel === 'editor') {
+          uiStore.setFocusedPanel('notes');
+        } else if (panel === 'notes' && uiStore.sidebarVisible) {
+          uiStore.setFocusedPanel('folders');
+        }
+        return;
+      }
+    }
+
+    // Esc in editor: return to notes panel (works even when input is focused)
+    if (event.key === "Escape" && uiStore.focusedPanel === 'editor') {
+      event.preventDefault();
+      // Blur the textarea
+      const editor = document.querySelector('.editor-textarea') as HTMLTextAreaElement;
+      editor?.blur();
+      uiStore.setFocusedPanel('notes');
       return;
     }
 
@@ -82,6 +182,10 @@
           event.preventDefault();
           showShortcuts = !showShortcuts;
           break;
+        case "d":
+          event.preventDefault();
+          handleDelete();
+          break;
       }
     }
   }
@@ -91,6 +195,36 @@
     return active instanceof HTMLInputElement ||
            active instanceof HTMLTextAreaElement ||
            active?.getAttribute("contenteditable") === "true";
+  }
+
+  async function handleDelete() {
+    const panel = uiStore.focusedPanel;
+
+    if (panel === 'folders') {
+      // Delete selected folder
+      const folder = notesStore.selectedFolder;
+      if (folder && folder !== 'inbox') {
+        const folderInfo = notesStore.folders.find(f => f.path === folder)
+          || notesStore.folders.flatMap(f => f.children).find(c => c.path === folder);
+        const name = folderInfo?.name || folder;
+        if (confirm(`Delete folder "${name}" and all its notes?`)) {
+          await notesStore.removeFolder(folder);
+        }
+      }
+    } else {
+      // Delete selected note (notes or editor panel)
+      const notePath = notesStore.getSelectedNotePath();
+      if (notePath) {
+        if (confirm("Delete this note?")) {
+          await notesStore.removeNote(notePath);
+          if (notesStore.notes.length > 0) {
+            editorStore.loadNote(notesStore.notes[0].path);
+          } else {
+            editorStore.clear();
+          }
+        }
+      }
+    }
   }
 
   async function handleDeleteSelectedNote() {
@@ -153,15 +287,15 @@
     <Toolbar onshowshortcuts={() => (showShortcuts = true)} />
 
     <div class="main">
-      <aside class="sidebar" class:collapsed={!uiStore.sidebarVisible}>
+      <aside class="sidebar" class:collapsed={!uiStore.sidebarVisible} class:pane-focused={uiStore.focusedPanel === 'folders'}>
         <Sidebar />
       </aside>
 
-      <section class="note-list" class:collapsed={!uiStore.noteListVisible}>
+      <section class="note-list" class:collapsed={!uiStore.noteListVisible} class:pane-focused={uiStore.focusedPanel === 'notes'}>
         <NoteList />
       </section>
 
-      <main class="editor">
+      <main class="editor" class:pane-focused={uiStore.focusedPanel === 'editor'}>
         <Editor />
       </main>
     </div>
@@ -255,4 +389,18 @@
     display: flex;
     flex-direction: column;
   }
-</style>
+
+  /* Pane focus indicator - subtle top border */
+  .sidebar.pane-focused,
+  .note-list.pane-focused,
+  .editor.pane-focused {
+    border-top: 2px solid var(--accent);
+  }
+
+  .sidebar:not(.pane-focused),
+  .note-list:not(.pane-focused),
+  .editor:not(.pane-focused) {
+    border-top: 2px solid transparent;
+  }
+
+  </style>

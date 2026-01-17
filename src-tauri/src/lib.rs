@@ -8,6 +8,21 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{Emitter, Manager};
 
+/// Ignore SIGPIPE on Unix systems.
+/// This prevents crashes when the app is detached from a terminal (e.g., `& disown`)
+/// and ALSA or other libraries try to write to stderr after the terminal is closed.
+#[cfg(unix)]
+fn ignore_sigpipe() {
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_IGN);
+    }
+}
+
+#[cfg(not(unix))]
+fn ignore_sigpipe() {
+    // No-op on non-Unix platforms
+}
+
 pub struct AppState {
     pub notes_dir: Mutex<PathBuf>,
     pub selected_audio_device: Mutex<Option<String>>,
@@ -34,6 +49,9 @@ impl Default for AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Prevent crashes when detached from terminal
+    ignore_sigpipe();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())

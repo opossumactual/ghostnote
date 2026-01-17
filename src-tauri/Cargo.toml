@@ -41,6 +41,10 @@ base64 = "0.22"
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 whisper-rs = "0.14"
 
+# Unix signal handling (SIGPIPE ignore for detached terminal)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [profile.release]
 panic = "abort"
 codegen-units = 1

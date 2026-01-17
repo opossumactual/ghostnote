@@ -26,6 +26,7 @@ pub struct Dek([u8; 32]);
 
 /// Vault configuration and paths
 pub struct VaultConfig {
+    pub notes_dir: PathBuf,
     pub vault_dir: PathBuf,
     pub salt_path: PathBuf,
     pub verify_path: PathBuf,
@@ -36,6 +37,7 @@ impl VaultConfig {
     pub fn new(base_dir: &PathBuf) -> Self {
         let vault_dir = base_dir.join(".vault");
         Self {
+            notes_dir: base_dir.clone(),
             salt_path: vault_dir.join("salt"),
             verify_path: vault_dir.join("verify"),
             recovery_path: vault_dir.join("recovery.key"),
@@ -232,12 +234,73 @@ impl RecoveryData {
 impl Clone for VaultConfig {
     fn clone(&self) -> Self {
         Self {
+            notes_dir: self.notes_dir.clone(),
             vault_dir: self.vault_dir.clone(),
             salt_path: self.salt_path.clone(),
             verify_path: self.verify_path.clone(),
             recovery_path: self.recovery_path.clone(),
         }
     }
+}
+
+/// Re-wrap all existing DEKs with a new KEK
+///
+/// This must be called when changing the password or recovering the vault,
+/// otherwise existing notes will become unreadable.
+fn rewrap_all_deks(notes_dir: &PathBuf, old_kek: &Kek, new_kek: &Kek) -> Result<usize, String> {
+    use walkdir::WalkDir;
+
+    let mut rewrapped_count = 0;
+
+    for entry in WalkDir::new(notes_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+
+        // Skip the .vault directory
+        if path.starts_with(notes_dir.join(".vault")) {
+            continue;
+        }
+
+        // Process .key files
+        if path.extension().map_or(false, |ext| ext == "key") {
+            // Read the wrapped DEK
+            let wrapped_dek = match fs::read(path) {
+                Ok(data) => data,
+                Err(e) => {
+                    eprintln!("Warning: Failed to read {}: {}", path.display(), e);
+                    continue;
+                }
+            };
+
+            // Unwrap with old KEK
+            let dek = match unwrap_dek(old_kek, &wrapped_dek) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("Warning: Failed to unwrap DEK at {}: {}", path.display(), e);
+                    continue;
+                }
+            };
+
+            // Re-wrap with new KEK
+            let new_wrapped_dek = match wrap_dek(new_kek, &dek) {
+                Ok(w) => w,
+                Err(e) => {
+                    return Err(format!("Failed to re-wrap DEK at {}: {}", path.display(), e));
+                }
+            };
+
+            // Write back
+            if let Err(e) = fs::write(path, &new_wrapped_dek) {
+                return Err(format!("Failed to write re-wrapped DEK at {}: {}", path.display(), e));
+            }
+
+            rewrapped_count += 1;
+        }
+    }
+
+    Ok(rewrapped_count)
 }
 
 /// Thread-safe vault state
@@ -505,7 +568,7 @@ pub async fn recover_vault(
         .map_err(|e| format!("Invalid recovery data: {}", e))?;
 
     // Recover the original KEK
-    let _original_kek = recovery_data
+    let original_kek = recovery_data
         .recover_kek(&recovery_key, &salt)
         .map_err(|_| "Invalid recovery key".to_string())?;
 
@@ -516,6 +579,12 @@ pub async fn recover_vault(
 
     // Derive new KEK from new password
     let new_kek = Kek::derive(&new_password, &new_salt)?;
+
+    // Re-wrap all existing DEKs with new KEK (must happen before we lose access to original KEK)
+    let rewrapped = rewrap_all_deks(&config.notes_dir, &original_kek, &new_kek)?;
+    if rewrapped > 0 {
+        eprintln!("Re-wrapped {} note DEKs with new KEK", rewrapped);
+    }
 
     // Re-encrypt verify blob with new KEK
     let verify_plaintext = b"ghostnote-verify";
@@ -530,9 +599,6 @@ pub async fn recover_vault(
         .map_err(|e| format!("Failed to serialize recovery data: {}", e))?;
     fs::write(&config.recovery_path, &new_recovery_json)
         .map_err(|e| format!("Failed to write recovery key: {}", e))?;
-
-    // TODO: Re-wrap all existing DEKs with new KEK
-    // This requires iterating all .key files and re-wrapping
 
     // Unlock with new KEK
     state.unlock(new_kek);
@@ -577,6 +643,12 @@ pub async fn change_password(
 
     // Derive new KEK
     let new_kek = Kek::derive(&new_password, &new_salt)?;
+
+    // Re-wrap all existing DEKs with new KEK
+    let rewrapped = rewrap_all_deks(&config.notes_dir, &current_kek, &new_kek)?;
+    if rewrapped > 0 {
+        eprintln!("Re-wrapped {} note DEKs with new KEK", rewrapped);
+    }
 
     // Re-encrypt verify blob
     let verify_plaintext = b"ghostnote-verify";

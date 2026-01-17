@@ -20,12 +20,12 @@ Download the latest release for your platform:
 
 | Platform | Download |
 |----------|----------|
-| Windows | [ghostnote_x64-setup.exe](https://github.com/opossumactual/onote/releases/latest) |
-| macOS (Apple Silicon) | [ghostnote_aarch64.dmg](https://github.com/opossumactual/onote/releases/latest) |
-| macOS (Intel) | [ghostnote_x64.dmg](https://github.com/opossumactual/onote/releases/latest) |
-| Linux (Debian/Ubuntu) | [ghostnote_amd64.deb](https://github.com/opossumactual/onote/releases/latest) |
-| Linux (Fedora/RHEL) | [ghostnote_x86_64.rpm](https://github.com/opossumactual/onote/releases/latest) |
-| Linux (Universal) | [ghostnote_amd64.AppImage](https://github.com/opossumactual/onote/releases/latest) |
+| Windows | [ghostnote_x64-setup.exe](https://github.com/opossumactual/ghostnote/releases/latest) |
+| macOS (Apple Silicon) | [ghostnote_aarch64.dmg](https://github.com/opossumactual/ghostnote/releases/latest) |
+| macOS (Intel) | [ghostnote_x64.dmg](https://github.com/opossumactual/ghostnote/releases/latest) |
+| Linux (Debian/Ubuntu) | [ghostnote_amd64.deb](https://github.com/opossumactual/ghostnote/releases/latest) |
+| Linux (Fedora/RHEL) | [ghostnote_x86_64.rpm](https://github.com/opossumactual/ghostnote/releases/latest) |
+| Linux (Universal) | [ghostnote_amd64.AppImage](https://github.com/opossumactual/ghostnote/releases/latest) |
 
 ## Linux Installation
 
@@ -65,6 +65,19 @@ chmod +x ghostnote_0.1.0_amd64.AppImage
 ./ghostnote_0.1.0_amd64.AppImage
 ```
 
+## macOS Installation
+
+1. Download the `.dmg` for your Mac (Apple Silicon or Intel)
+2. Open the `.dmg` and drag ghostnote to Applications
+3. Install whisper-cpp for transcription:
+   ```bash
+   brew install whisper-cpp
+   ```
+4. On first launch, you may need to bypass Gatekeeper:
+   ```bash
+   xattr -cr /Applications/ghostnote.app
+   ```
+
 ## First Run Setup
 
 1. **Create Master Password** - Choose a strong password (min 8 characters)
@@ -83,8 +96,9 @@ Your vault is now encrypted and ready to use.
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+L` | Toggle note list |
 | `Ctrl+/` | Show all shortcuts |
-| `Delete` | Delete selected note |
-| `Esc` | Close dialogs |
+| `Ctrl+D` | Delete selected note/folder |
+| Arrow keys | Navigate folders/notes/editor |
+| `Esc` | Close dialogs / exit editor |
 
 ## How It Works
 
@@ -128,7 +142,7 @@ Models are stored in `~/.local/share/ghostnote/models/`
 - **Backend**: [Tauri v2](https://tauri.app/) (Rust)
 - **Encryption**: [aes-gcm](https://crates.io/crates/aes-gcm), [argon2](https://crates.io/crates/argon2)
 - **Audio**: [cpal](https://github.com/RustAudio/cpal) for cross-platform capture
-- **Transcription**: [whisper-rs](https://github.com/tazz4843/whisper-rs) (OpenAI Whisper)
+- **Transcription**: [whisper-rs](https://github.com/tazz4843/whisper-rs) on Linux/Windows, [whisper-cli](https://github.com/ggerganov/whisper.cpp) on macOS
 
 ## Building from Source
 
@@ -141,9 +155,8 @@ Models are stored in `~/.local/share/ghostnote/models/`
 ### Development
 
 ```bash
-git clone https://github.com/opossumactual/onote.git
-cd onote
-git checkout feature/ghostnote
+git clone https://github.com/opossumactual/ghostnote.git
+cd ghostnote
 
 npm install
 npm run tauri dev
